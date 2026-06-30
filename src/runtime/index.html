@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Curso SCORM</title>
+    <link rel="stylesheet" href="assets/styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div>
+          <p class="eyebrow">Curso</p>
+          <h1 id="course-title">Cargando...</h1>
+          <p id="course-description" class="description"></p>
+        </div>
+        <nav id="lesson-nav" class="lesson-nav" aria-label="Lecciones"></nav>
+        <div class="progress-panel">
+          <span>Avance</span>
+          <strong id="progress-label">0%</strong>
+          <div class="progress-track"><div id="progress-bar" class="progress-bar"></div></div>
+        </div>
+      </aside>
+      <main class="course-main">
+        <section id="lesson-container" class="lesson-container" aria-live="polite"></section>
+        <footer class="course-footer">
+          <button id="prev-button" type="button">Anterior</button>
+          <button id="next-button" type="button">Siguiente</button>
+        </footer>
+      </main>
+    </div>
+    <script src="scorm/scorm-api-wrapper.js"></script>
+    <script src="assets/main.js"></script>
+  </body>
+</html>
