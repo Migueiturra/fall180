@@ -1,0 +1,10 @@
+{
+  "name": "authoring-scorm-builder-mvp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Plataforma local MVP para crear cursos por bloques y exportarlos como SCORM 1.2.",
+  "scripts": {
+    "start": "node src/app/server.js",
+    "export:scorm": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/export-scorm.ps1"
+  }
+}
