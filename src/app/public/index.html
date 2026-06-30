@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Authoring SCORM Builder</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Authoring SCORM Builder</p>
+          <h1>Constructor de cursos</h1>
+        </div>
+        <div class="topbar-actions">
+          <button id="save-button" type="button">Guardar</button>
+          <button id="export-button" class="primary" type="button">Exportar SCORM</button>
+        </div>
+      </header>
+      <main class="workspace">
+        <aside class="panel sidebar">
+          <section class="course-settings">
+            <h2>Curso</h2>
+            <label>Titulo<input id="course-title" type="text"></label>
+            <label>Descripcion<textarea id="course-description" rows="4"></textarea></label>
+            <label>Puntaje minimo<input id="passing-score" type="number" min="0" max="100" step="1"></label>
+          </section>
+          <section>
+            <div class="section-heading"><h2>Lecciones</h2><button id="add-lesson" class="small" type="button">Agregar</button></div>
+            <div id="lesson-list" class="lesson-list"></div>
+          </section>
+        </aside>
+        <section class="panel editor-panel">
+          <div class="section-heading">
+            <div><p class="eyebrow">Editor</p><h2 id="current-lesson-title">Leccion</h2></div>
+            <div class="toolbar">
+              <button data-add-block="heading" class="small" type="button">Titulo</button>
+              <button data-add-block="paragraph" class="small" type="button">Parrafo</button>
+              <button data-add-block="image_text" class="small" type="button">Imagen + texto</button>
+              <button data-add-block="embed" class="small" type="button">Embed</button>
+              <button data-add-block="custom_html" class="small" type="button">HTML</button>
+              <button data-add-block="quiz_single_choice" class="small" type="button">Quiz</button>
+              <button data-add-block="divider" class="small muted" type="button">Separador</button>
+            </div>
+          </div>
+          <label class="lesson-title-field">Titulo de la leccion<input id="lesson-title-input" type="text"></label>
+          <div id="block-list" class="block-list"></div>
+          <form id="block-form" class="block-form" autocomplete="off"></form>
+        </section>
+        <aside class="preview-panel">
+          <div class="preview-header"><div><p class="eyebrow">Vista previa</p><h2 id="preview-title">Curso</h2></div><span id="save-status" class="status">Listo</span></div>
+          <div id="preview" class="preview"></div>
+        </aside>
+      </main>
+    </div>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script src="/app.js"></script>
+  </body>
+</html>
