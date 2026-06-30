@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 280" role="img" aria-label="Interfaz abstracta de aprendizaje digital">
+  <rect width="420" height="280" rx="18" fill="#eef2ff"/>
+  <rect x="42" y="44" width="336" height="192" rx="14" fill="#ffffff" stroke="#cfd7ec"/>
+  <rect x="72" y="74" width="120" height="16" rx="8" fill="#2457c5"/>
+  <rect x="72" y="108" width="220" height="12" rx="6" fill="#b7c2da"/>
+  <rect x="72" y="132" width="184" height="12" rx="6" fill="#d5dbea"/>
+  <rect x="72" y="170" width="84" height="32" rx="6" fill="#13a38b"/>
+  <circle cx="312" cy="146" r="44" fill="#dff8f3"/>
+  <path d="M292 146l14 14 30-34" fill="none" stroke="#13a38b" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
