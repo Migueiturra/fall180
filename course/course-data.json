@@ -1,0 +1,103 @@
+{
+  "id": "curso-demo-scorm",
+  "title": "Curso Demo SCORM",
+  "description": "Primer curso exportable generado desde el prototipo authoring.",
+  "metadata": {
+    "language": "es",
+    "version": "0.1.0"
+  },
+  "theme": {
+    "primaryColor": "#2457c5",
+    "accentColor": "#13a38b"
+  },
+  "scorm": {
+    "version": "SCORM_1.2",
+    "passingScore": 80,
+    "completionRule": "view_all_blocks",
+    "reporting": "score_and_completion"
+  },
+  "lessons": [
+    {
+      "id": "leccion-1",
+      "title": "Bienvenida",
+      "blocks": [
+        {
+          "id": "b1",
+          "type": "heading",
+          "content": {
+            "text": "Bienvenida al curso",
+            "textHtml": "Bienvenida al curso"
+          }
+        },
+        {
+          "id": "b2",
+          "type": "paragraph",
+          "content": {
+            "text": "Este prototipo demuestra como un curso estructurado como JSON puede renderizarse como una experiencia web y exportarse a SCORM 1.2.",
+            "textHtml": "Este prototipo demuestra como un curso estructurado como JSON puede renderizarse como una experiencia web y exportarse a SCORM 1.2."
+          }
+        },
+        {
+          "id": "b3",
+          "type": "image_text",
+          "content": {
+            "imageAlt": "Interfaz abstracta de aprendizaje digital",
+            "imageUrl": "assets/demo-learning.svg",
+            "title": "Contenido por bloques",
+            "text": "Cada componente del curso se guarda como un bloque independiente. Esto permite escalar el editor con nuevos tipos de contenido e interacciones.",
+            "textHtml": "Cada componente del curso se guarda como un bloque independiente. Esto permite escalar el editor con nuevos tipos de contenido e interacciones."
+          }
+        },
+        {
+          "id": "b4",
+          "type": "embed",
+          "content": {
+            "title": "Recurso embebido",
+            "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            "caption": "Ejemplo de bloque embed con marco.",
+            "size": "wide",
+            "aspectRatio": "16 / 9",
+            "hasFrame": true
+          }
+        },
+        {
+          "id": "b5",
+          "type": "divider",
+          "content": {}
+        }
+      ]
+    },
+    {
+      "id": "leccion-2",
+      "title": "Chequeo rapido",
+      "blocks": [
+        {
+          "id": "b6",
+          "type": "heading",
+          "content": {
+            "text": "Pregunta de validacion",
+            "textHtml": "Pregunta de validacion"
+          }
+        },
+        {
+          "id": "b7",
+          "type": "quiz_single_choice",
+          "content": {
+            "question": "Cual es la pieza que permite que el LMS reconozca el paquete SCORM?",
+            "questionHtml": "Cual es la pieza que permite que el LMS reconozca el paquete SCORM?",
+            "options": [
+              "El archivo imsmanifest.xml",
+              "Una tabla en la base de datos",
+              "Un documento PDF dentro del curso"
+            ],
+            "correctAnswer": 0,
+            "feedbackCorrect": "Correcto. El manifest va en la raiz del ZIP y describe el contenido al LMS.",
+            "feedbackCorrectHtml": "Correcto. El manifest va en la raiz del ZIP y describe el contenido al LMS.",
+            "feedbackIncorrect": "Revisa la estructura SCORM: el LMS lee el archivo imsmanifest.xml desde la raiz del paquete.",
+            "feedbackIncorrectHtml": "Revisa la estructura SCORM: el LMS lee el archivo imsmanifest.xml desde la raiz del paquete."
+          }
+        }
+      ]
+    }
+  ]
+}
