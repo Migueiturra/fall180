@@ -304,12 +304,16 @@
     if (block.type === "image_gallery") {
       var imageHeight = Number(block.content.imageHeight) || (block.content.imageSize === "small" ? 180 : block.content.imageSize === "medium" ? 300 : block.content.imageSize === "full" ? 620 : 420);
       var frameClass = block.content.hasFrame === false ? " image-gallery-no-frame" : " image-gallery-frame";
-      var images = (block.content.images || []).map(function (image) {
-        return '<img style="max-height:' + escapeHtml(String(imageHeight)) + 'px" src="' + escapeHtml(image.url) + '" alt="' + escapeHtml(image.alt || "") + '">';
+      var galleryImages = block.content.images || [];
+      var images = galleryImages.map(function (image, index) {
+        return '<img class="' + (index === 0 ? "active" : "") + '" style="max-height:' + escapeHtml(String(imageHeight)) + 'px" src="' + escapeHtml(image.url) + '" alt="' + escapeHtml(image.alt || "") + '">';
       }).join("");
+      var controls = galleryImages.length > 1
+        ? '<button class="image-gallery-arrow prev" type="button" aria-label="Imagen anterior" data-gallery-action="prev">‹</button><button class="image-gallery-arrow next" type="button" aria-label="Imagen siguiente" data-gallery-action="next">›</button>'
+        : "";
       return '<article class="block image-gallery' + frameClass + ' reveal-block">' +
         (block.content.title ? '<strong>' + escapeHtml(block.content.title) + '</strong>' : '') +
-        '<div>' + images + '</div>' +
+        '<div class="image-gallery-stage">' + images + controls + '</div>' +
         '</article>';
     }
 
@@ -560,6 +564,19 @@
     });
 
     els.lesson.addEventListener("click", function (event) {
+      var galleryButton = event.target.closest("[data-gallery-action]");
+      if (galleryButton) {
+        var gallery = galleryButton.closest(".image-gallery-stage");
+        var galleryImages = Array.prototype.slice.call(gallery.querySelectorAll("img"));
+        var currentIndex = galleryImages.findIndex(function (image) { return image.classList.contains("active"); });
+        var direction = galleryButton.getAttribute("data-gallery-action") === "prev" ? -1 : 1;
+        var nextIndex = (Math.max(currentIndex, 0) + direction + galleryImages.length) % galleryImages.length;
+        galleryImages.forEach(function (image, index) {
+          image.classList.toggle("active", index === nextIndex);
+        });
+        return;
+      }
+
       if (event.target.closest("[data-continue]")) {
         var lesson = currentLesson();
         state.lessonScreens[lesson.id] = Math.min(revealedScreen(lesson) + 1, screenCount(lesson) - 1);

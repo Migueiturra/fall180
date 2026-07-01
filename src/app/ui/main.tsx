@@ -10,6 +10,7 @@ import {
   AlignRight,
   BookOpen,
   Check,
+  ChevronLeft,
   ChevronRight,
   Code2,
   Copy,
@@ -1056,8 +1057,49 @@ function imageHeightPx(content: Record<string, any>) {
 
 function ImageGalleryPreview({ content }: { content: Record<string, any> }) {
   const images = content.images || [];
+  const [active, setActive] = useState(0);
+  const hasMany = images.length > 1;
+  const height = imageHeightPx(content);
   const frameClass = content.hasFrame === false ? "border-0 rounded-none" : "rounded-md border border-line bg-white p-2 shadow-sm";
-  return <div className="grid gap-3">{content.title ? <strong className="text-sm">{content.title}</strong> : null}<div className="flex snap-x gap-3 overflow-x-auto rounded-md">{images.map((image: any, index: number) => <img key={`${image.url}-${index}`} src={resolveAsset(image.url)} alt={image.alt || ""} style={{ maxHeight: `${imageHeightPx(content)}px` }} className={`min-w-full snap-center object-contain ${frameClass}`} />)}</div></div>;
+
+  useEffect(() => {
+    if (active > Math.max(images.length - 1, 0)) setActive(0);
+  }, [active, images.length]);
+
+  if (!images.length) return null;
+
+  function move(direction: number) {
+    setActive((current) => (current + direction + images.length) % images.length);
+  }
+
+  return (
+    <div className="grid gap-3">
+      {content.title ? <strong className="text-sm">{content.title}</strong> : null}
+      <div className="group relative overflow-hidden rounded-md">
+        <div className="grid place-items-center">
+          {images.map((image: any, index: number) => (
+            <img
+              key={`${image.url}-${index}`}
+              src={resolveAsset(image.url)}
+              alt={image.alt || ""}
+              style={{ maxHeight: `${height}px` }}
+              className={`col-start-1 row-start-1 w-full object-contain transition-opacity duration-500 ease-out ${index === active ? "opacity-100" : "pointer-events-none opacity-0"} ${frameClass}`}
+            />
+          ))}
+        </div>
+        {hasMany ? (
+          <>
+            <button type="button" aria-label="Imagen anterior" onClick={() => move(-1)} className="absolute left-3 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-full border border-white/70 bg-white/90 text-ink shadow-sm opacity-0 transition hover:bg-white group-hover:opacity-100">
+              <ChevronLeft size={18} />
+            </button>
+            <button type="button" aria-label="Imagen siguiente" onClick={() => move(1)} className="absolute right-3 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-full border border-white/70 bg-white/90 text-ink shadow-sm opacity-0 transition hover:bg-white group-hover:opacity-100">
+              <ChevronRight size={18} />
+            </button>
+          </>
+        ) : null}
+      </div>
+    </div>
+  );
 }
 
 function FlipCardsPreview({ content }: { content: Record<string, any> }) {
