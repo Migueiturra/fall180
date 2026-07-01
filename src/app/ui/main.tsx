@@ -20,6 +20,7 @@ import {
   Plus,
   Save,
   Search,
+  Settings,
   Trash2,
   Upload,
   Video
@@ -95,6 +96,11 @@ function uid(prefix: string) {
 
 function getCourseId() {
   return new URLSearchParams(window.location.search).get("course") || "curso-demo-scorm";
+}
+
+function appRoute(path: string) {
+  if (path === "/") return "./";
+  return path.replace(/^\//, "");
 }
 
 function isStaticDeploy() {
@@ -238,16 +244,16 @@ function App() {
 function AppHeader({ section }: { section: "dashboard" | "editor" | "preview" }) {
   return (
     <header className="sticky top-0 z-30 flex h-[76px] items-center justify-between border-b border-line bg-white/90 px-6 backdrop-blur-xl">
-      <a className="flex items-center gap-3 no-underline" href="./courses.html">
+      <a className="flex items-center gap-3 no-underline" href={appRoute("/courses.html")}>
         <span className="grid size-5 place-items-center rounded-full bg-violet/20">
           <span className="size-2 rounded-full bg-violet" />
         </span>
         <strong className="text-lg text-ink">Fall 180</strong>
       </a>
       <nav className="flex items-center gap-6 text-sm font-extrabold text-ink">
-        <a className={section === "dashboard" ? "border-b-2 border-violet pb-2" : "pb-2"} href="./courses.html">Dashboard</a>
-        <a className={section === "editor" ? "border-b-2 border-violet pb-2" : "pb-2"} href={`./?course=${getCourseId()}`}>Editor</a>
-        <a className={section === "preview" ? "border-b-2 border-violet pb-2" : "pb-2"} href={`./preview.html?course=${getCourseId()}`}>Preview</a>
+        <a className={section === "dashboard" ? "border-b-2 border-violet pb-2" : "pb-2"} href={appRoute("/courses.html")}>Dashboard</a>
+        <a className={section === "editor" ? "border-b-2 border-violet pb-2" : "pb-2"} href={appRoute("/")}>Editor</a>
+        <a className={section === "preview" ? "border-b-2 border-violet pb-2" : "pb-2"} href={`${appRoute("/preview.html")}?course=${getCourseId()}`}>Preview</a>
       </nav>
       <div className="flex items-center gap-2" id="header-actions" />
     </header>
@@ -265,7 +271,7 @@ function DashboardApp() {
 
   async function createCourse() {
     const course = await createCourseRecord();
-    window.location.href = `./?course=${encodeURIComponent(course.id)}`;
+    window.location.href = `${appRoute("/")}?course=${encodeURIComponent(course.id)}`;
   }
 
   async function deleteCourse() {
@@ -342,8 +348,8 @@ function CourseCard({ course, index, onDelete }: { course: CourseSummary; index:
         <p className="mt-2 min-h-12 text-sm leading-relaxed text-steel">{course.description}</p>
         <div className="my-4 grid gap-1 text-xs font-bold text-steel"><span>Course · {course.lessons} Lessons</span><span>Updated today</span></div>
         <div className="flex flex-wrap gap-2">
-          <a className="rounded-md border border-line px-3 py-2 text-sm font-extrabold" href={`./?course=${course.id}`}>Editar</a>
-          <a className="rounded-md border border-line px-3 py-2 text-sm font-extrabold" href={`./preview.html?course=${course.id}`}>Preview</a>
+          <a className="rounded-md border border-line px-3 py-2 text-sm font-extrabold" href={`${appRoute("/")}?course=${course.id}`}>Editar</a>
+          <a className="rounded-md border border-line px-3 py-2 text-sm font-extrabold" href={`${appRoute("/preview.html")}?course=${course.id}`}>Preview</a>
           <button className="rounded-md border border-red-100 px-3 py-2 text-sm font-extrabold text-red-600" onClick={onDelete}><Trash2 size={14} /></button>
         </div>
       </div>
@@ -423,6 +429,21 @@ function EditorApp() {
     if (result.ok) window.location.href = result.zipUrl;
   }
 
+  function addBlock(type: BlockType) {
+    updateCourse((draft) => {
+      const block = defaultBlock(type);
+      draft.lessons[lessonIndex].blocks.push(block);
+      setEditingBlockId(block.id);
+    });
+  }
+
+  function addLesson() {
+    updateCourse((draft) => {
+      draft.lessons.push({ id: uid("lesson"), title: `Nueva leccion ${draft.lessons.length + 1}`, blocks: [defaultBlock("heading"), defaultBlock("paragraph")] });
+      setLessonIndex(draft.lessons.length - 1);
+    });
+  }
+
   if (!course) return <div className="grid min-h-screen place-items-center text-sm font-bold text-steel">Cargando editor...</div>;
 
   const lesson = course.lessons[lessonIndex] || course.lessons[0];
@@ -433,28 +454,30 @@ function EditorApp() {
       <AppHeader section="editor" />
       <div className="fixed right-6 top-5 z-40 flex gap-2">
         <span className="grid h-10 place-items-center rounded-full border border-line bg-white px-4 text-xs font-extrabold text-ink">{dirty ? "Sin guardar" : "Guardado"}</span>
-        <a className="grid h-10 place-items-center rounded-md border border-line bg-white px-4 text-sm font-extrabold" href={`./courses.html`}>Cursos</a>
-        <a className="grid h-10 place-items-center rounded-md border border-line bg-white px-4 text-sm font-extrabold" href={`./preview.html?course=${course.id}`}>Vista previa</a>
+        <CourseSettingsDialog course={course} onChange={updateCourse} />
+        <a className="grid h-10 place-items-center rounded-md border border-line bg-white px-4 text-sm font-extrabold" href={appRoute("/courses.html")}>Cursos</a>
+        <a className="grid h-10 place-items-center rounded-md border border-line bg-white px-4 text-sm font-extrabold" href={`${appRoute("/preview.html")}?course=${course.id}`}>Vista previa</a>
         <button onClick={save} className="inline-flex h-10 items-center gap-2 rounded-md bg-mist px-4 text-sm font-extrabold"><Save size={16} /> Guardar</button>
         <button onClick={exportScorm} className="inline-flex h-10 items-center gap-2 rounded-md bg-ink px-4 text-sm font-extrabold text-white"><Upload size={16} /> Exportar SCORM</button>
       </div>
-      <main className="grid min-h-[calc(100vh-76px)] grid-cols-[340px_minmax(0,1fr)] gap-5 bg-[#f0f0f8] p-5">
-        <aside className="rounded-xl bg-white p-5 shadow-soft">
-          <section className="rounded-lg border border-line bg-white p-4">
-            <h2 className="text-2xl font-black tracking-[-0.03em] text-ink">Curso</h2>
-            <Field label="Titulo" value={course.title} onChange={(value) => updateCourse((draft) => { draft.title = value; })} />
-            <TextField label="Descripcion" value={course.description} onChange={(value) => updateCourse((draft) => { draft.description = value; })} rows={4} />
-            <Field label="Puntaje minimo" type="number" value={String(course.scorm?.passingScore || 70)} onChange={(value) => updateCourse((draft) => { draft.scorm = draft.scorm || {}; draft.scorm.passingScore = Number(value); })} />
-          </section>
-          <section className="mt-7">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-2xl font-black tracking-[-0.03em] text-ink">Lecciones</h2>
-              <button className="rounded-md bg-mist px-3 py-2 text-sm font-extrabold" onClick={() => updateCourse((draft) => {
-                draft.lessons.push({ id: uid("lesson"), title: `Nueva leccion ${draft.lessons.length + 1}`, blocks: [defaultBlock("heading"), defaultBlock("paragraph")] });
-                setLessonIndex(draft.lessons.length - 1);
-              })}>Agregar</button>
+      <main className="grid min-h-[calc(100vh-76px)] grid-cols-[320px_minmax(0,1fr)] gap-5 bg-[#f0f0f8] p-5">
+        <aside className="sticky top-[96px] flex h-[calc(100vh-116px)] flex-col overflow-hidden rounded-xl bg-white shadow-soft">
+          <section className="border-b border-line p-5">
+            <p className="text-xs font-black uppercase tracking-[0.12em] text-violet">Bloques</p>
+            <h2 className="mt-1 text-xl font-black tracking-[-0.03em] text-ink">Herramientas</h2>
+            <div className="mt-4 grid grid-cols-2 gap-1">
+              {blockTools.map((tool) => <SidebarToolButton key={tool.type} tool={tool} onAdd={addBlock} />)}
             </div>
-            <div className="grid gap-2">
+          </section>
+          <section className="flex min-h-0 flex-1 flex-col p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.12em] text-violet">Curso</p>
+                <h2 className="text-2xl font-black tracking-[-0.03em] text-ink">Unidades</h2>
+              </div>
+              <button className="rounded-md bg-mist px-3 py-2 text-sm font-extrabold" onClick={addLesson}>Agregar</button>
+            </div>
+            <div className="grid min-h-0 flex-1 gap-2 overflow-y-auto pr-1">
               {course.lessons.map((item, index) => (
                 <LessonRow key={item.id} lesson={item} active={index === lessonIndex} onSelect={() => { setLessonIndex(index); setEditingBlockId(null); }} onMove={(direction) => updateCourse((draft) => moveLesson(draft.lessons, index, direction, setLessonIndex))} onDelete={() => updateCourse((draft) => {
                   if (draft.lessons.length <= 1) return;
@@ -465,21 +488,15 @@ function EditorApp() {
             </div>
           </section>
         </aside>
-        <section className="rounded-xl bg-white p-6 shadow-soft">
-          <div className="mb-5 flex items-start justify-between gap-6">
+        <section className="relative rounded-xl bg-white p-6 shadow-soft">
+          <div className="mb-7 flex items-start justify-between gap-6 border-b border-line pb-5">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.12em] text-violet">Editor</p>
               <input value={lesson.title} onChange={(event) => updateCourse((draft) => { draft.lessons[lessonIndex].title = event.target.value; })} className="mt-1 w-full border-0 bg-transparent text-2xl font-black tracking-[-0.03em] text-ink outline-none" />
             </div>
-            <div className="flex max-w-[650px] flex-wrap justify-end gap-2 rounded-lg border border-line bg-mist p-2">
-              {blockTools.map((tool) => <button key={tool.type} onClick={() => updateCourse((draft) => {
-                const block = defaultBlock(tool.type);
-                draft.lessons[lessonIndex].blocks.push(block);
-                setEditingBlockId(block.id);
-              })} className="inline-flex h-9 items-center gap-2 rounded-md px-3 text-xs font-black hover:bg-white">{tool.icon}{tool.label}</button>)}
-            </div>
+            <button onClick={() => setEditingBlockId(null)} className="rounded-md border border-line bg-white px-4 py-2 text-sm font-extrabold text-ink">Ver como queda</button>
           </div>
-          <div className="grid gap-4">
+          <div className="grid gap-4 pb-28">
             {lesson.blocks.map((block, index) => (
               <BlockShell key={block.id} block={block} editing={block.id === editingBlockId} onEdit={() => setEditingBlockId(block.id)} onSave={async () => { await save(); setEditingBlockId(null); }} onMove={(direction) => updateCourse((draft) => moveItem(draft.lessons[lessonIndex].blocks, index, direction))} onDelete={() => updateCourse((draft) => {
                 draft.lessons[lessonIndex].blocks.splice(index, 1);
@@ -487,10 +504,75 @@ function EditorApp() {
               })} onChange={(content) => updateCourse((draft) => { draft.lessons[lessonIndex].blocks[index].content = content; })} />
             ))}
           </div>
+          <BottomBlockBar onAdd={addBlock} />
         </section>
       </main>
       {toast ? <div className="fixed bottom-5 right-5 rounded-lg bg-ink px-5 py-3 text-sm font-bold text-white shadow-soft">{toast}</div> : null}
     </Tooltip.Provider>
+  );
+}
+
+function CourseSettingsDialog({ course, onChange }: { course: Course; onChange: (mutator: (draft: Course) => void) => void }) {
+  return (
+    <Dialog.Root>
+      <Dialog.Trigger asChild>
+        <button className="inline-flex h-10 items-center gap-2 rounded-md border border-line bg-white px-4 text-sm font-extrabold">
+          <Settings size={16} /> Datos del curso
+        </button>
+      </Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-ink/35" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(520px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white p-6 shadow-soft">
+          <Dialog.Title className="text-2xl font-black tracking-[-0.03em] text-ink">Datos del curso</Dialog.Title>
+          <Dialog.Description className="mt-2 text-sm leading-relaxed text-steel">
+            Configura la informacion general. Despues puedes seguir editandola desde este panel.
+          </Dialog.Description>
+          <div className="mt-5 rounded-lg border border-line bg-white p-4">
+            <Field label="Titulo" value={course.title} onChange={(value) => onChange((draft) => { draft.title = value; })} />
+            <TextField label="Descripcion" value={course.description} onChange={(value) => onChange((draft) => { draft.description = value; })} rows={4} />
+            <Field label="Puntaje minimo" type="number" value={String(course.scorm?.passingScore || 70)} onChange={(value) => onChange((draft) => { draft.scorm = draft.scorm || {}; draft.scorm.passingScore = Number(value); })} />
+          </div>
+          <div className="mt-6 flex justify-end">
+            <Dialog.Close asChild>
+              <button className="rounded-md bg-ink px-4 py-2 text-sm font-extrabold text-white">Listo</button>
+            </Dialog.Close>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
+function SidebarToolButton({ tool, onAdd }: { tool: { type: BlockType; label: string; icon: React.ReactNode }; onAdd: (type: BlockType) => void }) {
+  return (
+    <button onClick={() => onAdd(tool.type)} className="group flex h-10 min-w-0 items-center gap-2 rounded-md px-2 text-left text-xs font-extrabold text-ink transition hover:bg-mist">
+      <span className="grid size-7 shrink-0 place-items-center rounded-md bg-mist text-plum transition group-hover:bg-white group-hover:text-violet">{tool.icon}</span>
+      <span className="truncate">{tool.label}</span>
+    </button>
+  );
+}
+
+function BottomBlockBar({ onAdd }: { onAdd: (type: BlockType) => void }) {
+  return (
+    <div className="sticky bottom-4 z-20 mx-auto mt-8 max-w-4xl rounded-2xl border border-violet/20 bg-white/95 p-3 shadow-soft backdrop-blur-xl">
+      <div className="flex items-center gap-4">
+        <span className="hidden shrink-0 pl-2 text-xs font-black uppercase tracking-[0.12em] text-violet md:block">Agregar bloque</span>
+        <div className="flex flex-1 flex-wrap justify-center gap-1 md:justify-end">
+          {blockTools.map((tool) => (
+            <Tooltip.Root key={tool.type}>
+              <Tooltip.Trigger asChild>
+                <button aria-label={tool.label} onClick={() => onAdd(tool.type)} className="grid size-10 place-items-center rounded-md text-ink transition hover:bg-mist hover:text-violet">
+                  {tool.icon}
+                </button>
+              </Tooltip.Trigger>
+              <Tooltip.Portal>
+                <Tooltip.Content className="rounded bg-ink px-2 py-1 text-xs font-bold text-white" sideOffset={8}>{tool.label}</Tooltip.Content>
+              </Tooltip.Portal>
+            </Tooltip.Root>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -627,13 +709,13 @@ function PreviewApp() {
         <div className="bg-gradient-to-br from-plum to-ink p-8 text-white"><p className="text-xs font-black uppercase tracking-[0.12em]">Course preview</p><h1 className="mt-6 text-3xl font-black">{course.title}</h1><p className="mt-7 text-sm font-black">50% COMPLETE</p><div className="mt-3 h-1 bg-white/35"><i className="block h-full w-1/2 bg-white" /></div></div>
         <nav className="grid gap-2 p-5">{course.lessons.map((item, index) => <button key={item.id} onClick={() => setLessonIndex(index)} className={`grid grid-cols-[28px_1fr_auto] items-center gap-3 rounded-md px-3 py-3 text-left ${index === lessonIndex ? "bg-mist" : ""}`}><span className="grid size-6 place-items-center rounded-full border border-line text-sm font-bold">{index + 1}</span><strong>{item.title}</strong><small className="font-bold text-steel">{index <= lessonIndex ? "Disponible" : "Bloqueada"}</small></button>)}</nav>
       </aside>
-      <main className="p-10"><a className="mb-8 inline-flex rounded-md border border-line px-4 py-2 font-extrabold" href={`./?course=${course.id}`}>Volver al editor</a><section className="mx-auto max-w-5xl"><p className="text-xs font-black uppercase tracking-[0.12em] text-violet">Unidad {lessonIndex + 1} de {course.lessons.length}</p><h2 className="mb-8 text-4xl font-black tracking-[-0.04em]">{lesson.title}</h2><div className="grid gap-7">{lesson.blocks.map((block) => <div className="fade-up" key={block.id}><BlockPreview block={block} /></div>)}</div>{lessonIndex < course.lessons.length - 1 ? <div className="mt-8 rounded-lg border border-dashed border-violet/40 bg-mist p-6 text-center"><button onClick={() => setLessonIndex(lessonIndex + 1)} className="rounded-md bg-ink px-5 py-3 font-extrabold text-white">Ir a la siguiente unidad</button></div> : null}</section></main>
+      <main className="p-10"><a className="mb-8 inline-flex rounded-md border border-line px-4 py-2 font-extrabold" href={`${appRoute("/")}?course=${course.id}`}>Volver al editor</a><section className="mx-auto max-w-5xl"><p className="text-xs font-black uppercase tracking-[0.12em] text-violet">Unidad {lessonIndex + 1} de {course.lessons.length}</p><h2 className="mb-8 text-4xl font-black tracking-[-0.04em]">{lesson.title}</h2><div className="grid gap-7">{lesson.blocks.map((block) => <div className="fade-up" key={block.id}><BlockPreview block={block} /></div>)}</div>{lessonIndex < course.lessons.length - 1 ? <div className="mt-8 rounded-lg border border-dashed border-violet/40 bg-mist p-6 text-center"><button onClick={() => setLessonIndex(lessonIndex + 1)} className="rounded-md bg-ink px-5 py-3 font-extrabold text-white">Ir a la siguiente unidad</button></div> : null}</section></main>
     </div>
   );
 }
 
 function resolveAsset(url = "") {
-  if (url.startsWith("assets/")) return `/runtime-assets/${url.replace("assets/", "")}`;
+  if (url.startsWith("assets/")) return `runtime-assets/${url.replace("assets/", "")}`;
   return url;
 }
 
