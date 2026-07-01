@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Fall 180 Studio - Cursos</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body class="dashboard-page">
+    <header class="dashboard-topbar">
+      <div class="brand-mark">
+        <span></span>
+        <strong>Fall 180</strong>
+      </div>
+      <nav class="dashboard-tabs">
+        <a href="/courses.html" class="active">Dashboard</a>
+        <a href="/">Editor</a>
+        <a href="/preview.html">Preview</a>
+      </nav>
+      <button class="primary" type="button" data-create-course>+ Crear nuevo</button>
+    </header>
+    <main class="dashboard-shell">
+      <aside class="dashboard-sidebar">
+        <button class="sidebar-create" type="button" data-create-course>+ Create New</button>
+        <nav>
+          <a class="active" href="#">All Content</a>
+          <a href="#">Shared With Me</a>
+          <a href="#">My Shortcuts</a>
+          <a href="#">Private</a>
+          <a href="#">Team</a>
+        </nav>
+        <section>
+          <p class="eyebrow">External connections</p>
+          <a href="#">Moodle Sandbox</a>
+          <a href="#">SCORM exports</a>
+        </section>
+      </aside>
+      <section class="dashboard-content">
+        <div class="dashboard-filterbar">
+          <div>
+            <p class="eyebrow">Contenido</p>
+            <h1>All Content</h1>
+          </div>
+          <label class="search-field">
+            <span>Buscar</span>
+            <input id="course-search" type="search" placeholder="Search all content">
+          </label>
+          <select>
+            <option>Recent</option>
+            <option>Title</option>
+          </select>
+          <select>
+            <option>All Content</option>
+            <option>Courses</option>
+          </select>
+        </div>
+        <div id="course-grid" class="course-grid"></div>
+      </section>
+    </main>
+    <script src="/courses.js"></script>
+  </body>
+</html>

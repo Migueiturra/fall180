@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Vista previa del curso</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body class="preview-page">
+    <div class="course-preview-shell">
+      <aside class="course-preview-sidebar">
+        <div class="course-preview-cover">
+          <p class="eyebrow">Course Preview</p>
+          <h1 id="preview-course-title">Curso</h1>
+          <div class="preview-progress">
+            <span>0% complete</span>
+            <div><i></i></div>
+          </div>
+        </div>
+        <nav id="preview-lesson-nav" class="preview-lesson-nav" aria-label="Navegacion del curso"></nav>
+      </aside>
+      <main class="course-preview-main">
+        <header class="preview-topbar">
+          <button class="icon-button" type="button" aria-label="Menu">☰</button>
+          <a class="button ghost" href="/">Volver al editor</a>
+        </header>
+        <section id="standalone-preview" class="standalone-preview"></section>
+      </main>
+    </div>
+    <script src="/preview.js"></script>
+  </body>
+</html>

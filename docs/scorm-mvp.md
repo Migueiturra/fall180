@@ -43,3 +43,4 @@ El prototipo se considera validado cuando el LMS muestra:
 - Curso completado.
 - Puntaje registrado.
 - Reanudacion desde la ultima leccion.
+

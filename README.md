@@ -27,9 +27,6 @@ authoring-scorm-builder-mvp/
   course/
     course-data.json
   src/
-    app/
-      server.js
-      public/
     runtime/
       index.html
       main.js
@@ -39,24 +36,7 @@ authoring-scorm-builder-mvp/
     export-scorm.ps1
   docs/
     scorm-mvp.md
-    ruta-plataforma-profesional.md
 ```
-
-## Como abrir la plataforma local
-
-Con Node.js instalado, desde la carpeta del proyecto:
-
-```powershell
-npm run start
-```
-
-Luego abre:
-
-```text
-http://localhost:4173
-```
-
-Desde esa pantalla puedes editar el curso, guardar los cambios y exportar nuevamente el ZIP SCORM.
 
 ## Como generar el ZIP SCORM
 
@@ -66,10 +46,10 @@ Desde PowerShell:
 .\scripts\export-scorm.ps1
 ```
 
-O mediante npm:
+Si Windows bloquea la ejecucion directa del script:
 
 ```powershell
-npm run export:scorm
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\export-scorm.ps1
 ```
 
 El resultado se genera en:
@@ -77,6 +57,22 @@ El resultado se genera en:
 ```text
 dist/curso-demo-scorm.zip
 ```
+
+## Como abrir la plataforma local
+
+Desde la carpeta del proyecto:
+
+```powershell
+& "C:\Users\PC\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe" .\src\app\server.js
+```
+
+Luego abre:
+
+```text
+http://localhost:4173
+```
+
+Desde esa pantalla puedes editar el curso, guardar los cambios y exportar nuevamente el ZIP SCORM.
 
 ## Avance actual de la plataforma
 
@@ -103,4 +99,4 @@ La plataforma local ya permite:
 
 ## Siguiente paso recomendado
 
-Agregar el bloque `sorting`, porque es una interaccion concreta tipo Rise 360 y permite validar que el motor soporta actividades mas complejas que un quiz simple.
+Despues de validar el ZIP en Moodle, el siguiente hito es crear un editor visual simple que escriba el mismo formato `course-data.json`.
