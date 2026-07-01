@@ -1,4 +1,4 @@
-# Authoring SCORM Builder MVP
+# PulseStudio
 
 Prototipo tecnico para validar el flujo base:
 
@@ -97,6 +97,7 @@ La plataforma local ya permite:
 
 - Editar datos generales del curso.
 - Gestionar cursos desde dashboard.
+- Guardar cursos en Supabase cuando las variables de entorno estan configuradas.
 - Crear y ordenar lecciones.
 - Crear y ordenar bloques.
 - Editar textos con formato enriquecido.
@@ -115,6 +116,29 @@ La plataforma local ya permite:
 5. Responde el quiz.
 6. Verifica que el LMS registre avance, completitud y puntaje.
 
+## Conexion con Supabase
+
+1. En Supabase, abre el SQL Editor del proyecto PulseStudio.
+2. Ejecuta el contenido de `supabase/schema.sql`.
+3. Copia `.env.example` como `.env`.
+4. En `.env`, completa:
+
+```text
+VITE_SUPABASE_URL=https://swjptigsplrexotqnhyu.supabase.co
+VITE_SUPABASE_ANON_KEY=tu_anon_key_publica
+```
+
+5. Reinicia Vite o vuelve a compilar.
+
+Para GitHub Pages, crea estas repository variables en GitHub:
+
+```text
+VITE_SUPABASE_URL
+VITE_SUPABASE_ANON_KEY
+```
+
+La anon key de Supabase es publica por diseno cuando se usa con RLS. El schema actual deja CRUD abierto para el prototipo; cuando agreguemos usuarios/login, hay que reemplazar esas politicas por reglas por usuario u organizacion.
+
 ## Siguiente paso recomendado
 
-El siguiente hito recomendado es profundizar el editor React: plantillas visuales por bloque, temas de curso, banco de preguntas y persistencia en base de datos.
+El siguiente hito recomendado es profundizar la persistencia: usuarios, organizaciones, permisos por curso, plantillas visuales por bloque, temas de curso y banco de preguntas.

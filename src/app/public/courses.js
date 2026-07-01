@@ -14,7 +14,7 @@ function courseCard(course, index) {
         <span>COURSE</span>
       </div>
       <div class="course-card-body">
-        <div class="course-author"><span>F</span> Fall 180 Studio</div>
+        <div class="course-author"><span>P</span> PulseStudio</div>
         <h2>${escapeHtml(course.title)}</h2>
         <p>${escapeHtml(course.description)}</p>
         <div class="course-meta">

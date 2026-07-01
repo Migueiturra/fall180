@@ -26,6 +26,14 @@ import {
   Video
 } from "lucide-react";
 import demoCourseData from "../../../course/courses/curso-demo-scorm.json";
+import {
+  createSupabaseCourse,
+  deleteSupabaseCourse,
+  isSupabaseConfigured,
+  loadSupabaseCourse,
+  loadSupabaseCourseList,
+  saveSupabaseCourse
+} from "./supabase";
 import "./styles.css";
 
 type BlockType =
@@ -135,6 +143,14 @@ function writeStaticCourses(courses: Course[]) {
 }
 
 async function loadCourseList(): Promise<CourseSummary[]> {
+  if (isSupabaseConfigured) {
+    try {
+      return await loadSupabaseCourseList();
+    } catch {
+      // Supabase can be configured but unavailable during local prototyping.
+    }
+  }
+
   if (!isStaticDeploy()) {
     try {
       const response = await fetch("/api/courses");
@@ -150,6 +166,15 @@ async function loadCourseList(): Promise<CourseSummary[]> {
 }
 
 async function loadCourseById(id: string): Promise<Course> {
+  if (isSupabaseConfigured) {
+    try {
+      const course = await loadSupabaseCourse(id);
+      if (course) return course as Course;
+    } catch {
+      // Keep the editor usable if Supabase is temporarily unavailable.
+    }
+  }
+
   if (!isStaticDeploy()) {
     try {
       const response = await fetch(`/api/course?id=${encodeURIComponent(id)}`);
@@ -162,15 +187,6 @@ async function loadCourseById(id: string): Promise<Course> {
 }
 
 async function createCourseRecord(): Promise<CourseSummary> {
-  if (!isStaticDeploy()) {
-    const response = await fetch("/api/courses", { method: "POST" });
-    if (response.ok) {
-      const result = await response.json();
-      if (result.ok) return result.course;
-    }
-  }
-
-  const courses = readStaticCourses();
   const course = structuredClone(demoCourse);
   course.id = `nuevo-curso-${Date.now()}`;
   course.title = "Nuevo curso";
@@ -180,12 +196,39 @@ async function createCourseRecord(): Promise<CourseSummary> {
     title: "Bienvenida",
     blocks: [defaultBlock("heading"), defaultBlock("paragraph")]
   }];
+
+  if (isSupabaseConfigured) {
+    try {
+      return await createSupabaseCourse(course);
+    } catch {
+      // Fall through to the current persistence layer.
+    }
+  }
+
+  if (!isStaticDeploy()) {
+    const response = await fetch("/api/courses", { method: "POST" });
+    if (response.ok) {
+      const result = await response.json();
+      if (result.ok) return result.course;
+    }
+  }
+
+  const courses = readStaticCourses();
   courses.push(course);
   writeStaticCourses(courses);
   return courseSummary(course);
 }
 
 async function saveCourseRecord(course: Course): Promise<{ ok: boolean; error?: string }> {
+  if (isSupabaseConfigured) {
+    try {
+      await saveSupabaseCourse(course);
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : "No se pudo guardar en Supabase." };
+    }
+  }
+
   if (!isStaticDeploy()) {
     try {
       const response = await fetch(`/api/course?id=${encodeURIComponent(course.id)}`, {
@@ -292,7 +335,7 @@ function AppHeader({ section }: { section: "dashboard" | "editor" | "preview" })
         <span className="grid size-4 place-items-center rounded-full bg-violet/20">
           <span className="size-1.5 rounded-full bg-violet" />
         </span>
-        <strong className="text-base text-ink">Fall 180</strong>
+        <strong className="text-base text-ink">PulseStudio</strong>
       </a>
       <nav className="hidden items-center gap-1 text-xs font-extrabold text-ink md:flex">
         <a className={section === "dashboard" ? "rounded-md bg-mist px-2.5 py-2 text-violet" : "rounded-md px-2.5 py-2 hover:bg-mist"} href={appRoute("/courses.html")}>Dashboard</a>
@@ -320,6 +363,17 @@ function DashboardApp() {
 
   async function deleteCourse() {
     if (!deleteTarget) return;
+    if (isSupabaseConfigured) {
+      try {
+        await deleteSupabaseCourse(deleteTarget.id);
+        setDeleteTarget(null);
+        load();
+        return;
+      } catch {
+        // Use the previous delete path when Supabase is not reachable.
+      }
+    }
+
     if (isStaticDeploy()) {
       writeStaticCourses(readStaticCourses().filter((course) => course.id !== deleteTarget.id));
       setDeleteTarget(null);
@@ -387,7 +441,7 @@ function CourseCard({ course, index, onDelete }: { course: CourseSummary; index:
         <span className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-black uppercase tracking-[0.08em] text-white">Course</span>
       </div>
       <div className="p-5">
-        <div className="flex items-center gap-2 text-xs font-bold text-steel"><span className="grid size-5 place-items-center rounded-full bg-violet/15 text-violet">F</span> Fall 180 Studio</div>
+        <div className="flex items-center gap-2 text-xs font-bold text-steel"><span className="grid size-5 place-items-center rounded-full bg-violet/15 text-violet">P</span> PulseStudio</div>
         <h2 className="mt-3 text-xl font-black leading-tight tracking-[-0.03em] text-ink">{course.title}</h2>
         <p className="mt-2 min-h-12 text-sm leading-relaxed text-steel">{course.description}</p>
         <div className="my-4 grid gap-1 text-xs font-bold text-steel"><span>Course · {course.lessons} Lessons</span><span>Updated today</span></div>

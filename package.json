@@ -1,5 +1,5 @@
 {
-  "name": "authoring-scorm-builder-mvp",
+  "name": "pulsestudio",
   "version": "0.1.0",
   "private": true,
   "description": "Plataforma local MVP para crear cursos por bloques y exportarlos como SCORM 1.2.",
@@ -12,6 +12,7 @@
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.18",
     "@radix-ui/react-tooltip": "^1.2.11",
+    "@supabase/supabase-js": "^2.110.0",
     "@tailwindcss/vite": "^4.3.2",
     "@vitejs/plugin-react": "^6.0.3",
     "lucide-react": "^1.22.0",
