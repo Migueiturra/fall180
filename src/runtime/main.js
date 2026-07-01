@@ -110,6 +110,12 @@
     return Math.max(220, stored);
   }
 
+  function customHtmlAlignmentStyle(content) {
+    if (content.htmlAlign === "left") return "margin-left:0;margin-right:auto;";
+    if (content.htmlAlign === "right") return "margin-left:auto;margin-right:0;";
+    return "margin-left:auto;margin-right:auto;";
+  }
+
   window.addEventListener("message", function (event) {
     if (!event.data || event.data.type !== "pulsestudio-html-height") return;
     var frame = document.querySelector('[data-html-frame="' + String(event.data.id).replace(/"/g, "") + '"]');
@@ -375,7 +381,7 @@
       var fixed = block.content.htmlSizing === "fixed";
       var htmlHeight = Number(block.content.htmlHeight) || 420;
       var htmlWidth = customHtmlWidth(block.content);
-      var wrapStyle = block.content.htmlWidthMode === "full" ? "" : ' style="max-width:' + htmlWidth + 'px"';
+      var wrapStyle = block.content.htmlWidthMode === "full" ? "" : ' style="max-width:' + htmlWidth + 'px;' + customHtmlAlignmentStyle(block.content) + '"';
       return '<article class="block ' + mediaClass(block.content) + ' reveal-block">' +
         (block.content.title ? '<strong class="media-title">' + escapeHtml(block.content.title) + '</strong>' : '') +
         '<div class="custom-html-wrap"' + wrapStyle + '><iframe class="custom-html-frame" title="' + escapeHtml(block.content.title || "HTML custom") + '" sandbox="allow-scripts allow-forms allow-popups" data-html-frame="' + escapeHtml(frameId) + '" data-sizing="' + (fixed ? "fixed" : "auto") + '" data-min-height="' + htmlHeight + '" srcdoc="' + escapeHtml(customHtmlSrcDoc(block.content, frameId)) + '" style="height:' + htmlHeight + 'px"></iframe></div>' +
