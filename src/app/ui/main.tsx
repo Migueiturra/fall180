@@ -116,6 +116,17 @@ const blockTools: Array<{ type: BlockType; label: string; icon: React.ReactNode 
   { type: "divider", label: "Separador", icon: <Minus size={15} /> }
 ];
 
+const blockToolGroups: Array<{ title: string; tools: BlockType[]; defaultOpen?: boolean }> = [
+  { title: "Texto", tools: ["heading", "paragraph", "statement", "list", "divider"], defaultOpen: true },
+  { title: "Media", tools: ["image_text", "image_gallery", "embed", "custom_html"], defaultOpen: true },
+  { title: "Interaccion", tools: ["flip_cards", "accordion", "continue_button"] },
+  { title: "Evaluacion", tools: ["quiz_single_choice", "quiz_multiple_response", "quiz_fill_blank", "quiz_matching"] }
+];
+
+function blockToolByType(type: BlockType) {
+  return blockTools.find((tool) => tool.type === type)!;
+}
+
 function RowsIcon() {
   return <span className="grid gap-[2px]"><i className="block h-[2px] w-[14px] rounded bg-current" /><i className="block h-[2px] w-[14px] rounded bg-current" /><i className="block h-[2px] w-[14px] rounded bg-current" /></span>;
 }
@@ -614,8 +625,8 @@ function EditorApp() {
           <section className="border-b border-line p-3">
             <p className="text-[10px] font-black uppercase tracking-[0.12em] text-violet">Bloques</p>
             <h2 className="mt-0.5 text-sm font-black tracking-[-0.02em] text-ink">Herramientas</h2>
-            <div className="mt-2 grid gap-0.5">
-              {blockTools.map((tool) => <SidebarToolButton key={tool.type} tool={tool} onAdd={addBlock} />)}
+            <div className="mt-2 grid gap-1">
+              {blockToolGroups.map((group) => <SidebarToolGroup key={group.title} group={group} onAdd={addBlock} />)}
             </div>
           </section>
           <section className="flex min-h-0 flex-1 flex-col p-3">
@@ -702,6 +713,20 @@ function SidebarToolButton({ tool, onAdd }: { tool: { type: BlockType; label: st
       <span className="grid size-5 shrink-0 place-items-center rounded bg-mist text-plum transition group-hover:bg-white group-hover:text-violet">{tool.icon}</span>
       <span className="truncate">{tool.label}</span>
     </button>
+  );
+}
+
+function SidebarToolGroup({ group, onAdd }: { group: { title: string; tools: BlockType[]; defaultOpen?: boolean }; onAdd: (type: BlockType) => void }) {
+  return (
+    <details className="rounded-md border border-line/80 bg-white" open={group.defaultOpen}>
+      <summary className="flex cursor-pointer list-none items-center justify-between rounded-md px-2 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-steel hover:bg-mist">
+        <span>{group.title}</span>
+        <ChevronRight className="transition details-chevron" size={13} />
+      </summary>
+      <div className="grid gap-0.5 border-t border-line/70 p-1.5">
+        {group.tools.map((type) => <SidebarToolButton key={type} tool={blockToolByType(type)} onAdd={onAdd} />)}
+      </div>
+    </details>
   );
 }
 

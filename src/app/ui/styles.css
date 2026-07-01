@@ -34,6 +34,14 @@ button {
   cursor: pointer;
 }
 
+summary::-webkit-details-marker {
+  display: none;
+}
+
+details[open] .details-chevron {
+  transform: rotate(90deg);
+}
+
 .rich-output p,
 .rich-output div {
   margin: 0 0 0.7rem;
