@@ -4,7 +4,21 @@
   "private": true,
   "description": "Plataforma local MVP para crear cursos por bloques y exportarlos como SCORM 1.2.",
   "scripts": {
+    "dev": "vite",
+    "build": "vite build",
     "start": "node src/app/server.js",
     "export:scorm": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/export-scorm.ps1"
+  },
+  "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.18",
+    "@radix-ui/react-tooltip": "^1.2.11",
+    "@tailwindcss/vite": "^4.3.2",
+    "@vitejs/plugin-react": "^6.0.3",
+    "lucide-react": "^1.22.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "tailwindcss": "^4.3.2",
+    "typescript": "^6.0.3",
+    "vite": "^8.1.2"
   }
 }

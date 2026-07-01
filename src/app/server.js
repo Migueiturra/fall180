@@ -4,7 +4,9 @@ const path = require("path");
 const { execFile } = require("child_process");
 
 const projectRoot = path.resolve(__dirname, "../..");
-const publicRoot = path.join(__dirname, "public");
+const legacyPublicRoot = path.join(__dirname, "public");
+const frontendRoot = path.join(__dirname, "frontend-dist");
+const publicRoot = fs.existsSync(frontendRoot) ? frontendRoot : legacyPublicRoot;
 const coursePath = path.join(projectRoot, "course", "course-data.json");
 const coursesRoot = path.join(projectRoot, "course", "courses");
 const runtimeRoot = path.join(projectRoot, "src", "runtime");
@@ -59,6 +61,11 @@ function serveStatic(res, filePath) {
   const ext = path.extname(filePath).toLowerCase();
   res.writeHead(200, { "Content-Type": contentTypes[ext] || "application/octet-stream" });
   fs.createReadStream(filePath).pipe(res);
+}
+
+function serveAppShell(res) {
+  const shell = path.join(publicRoot, "index.html");
+  serveStatic(res, shell);
 }
 
 function validateCourse(course) {
@@ -246,7 +253,15 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === "GET") {
       const pathname = url.pathname === "/" ? "/index.html" : url.pathname;
+      if (fs.existsSync(frontendRoot) && (pathname === "/index.html" || pathname.endsWith(".html"))) {
+        serveAppShell(res);
+        return;
+      }
       const file = safeFile(publicRoot, pathname);
+      if (fs.existsSync(frontendRoot) && (!file || !fs.existsSync(file))) {
+        serveAppShell(res);
+        return;
+      }
       serveStatic(res, file);
       return;
     }

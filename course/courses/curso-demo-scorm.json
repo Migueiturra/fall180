@@ -36,6 +36,94 @@
             "text": "Escribe aqui el contenido del parrafo. BlablaTrabajando.com Empresas, por ejemplo, ofrece un ATS propio para publicar ofertas, centralizar candidatos, revisar CVs, agregar observaciones, clasificar postulantes y avanzar entre etapas. \nIndeed, en cambio, muestra claramente el modelo de integración con ATS externos: jobs y candidatos se sincronizan entre Indeed y el ATS. \nPara enseñar bien:\n\nNo digas “el ATS saca los CV desde Laborum”.\nDi: “El ATS puede recibir candidatos desde portales si hay integración; si no, el reclutador trabaja en el portal, descarga/exporta o carga manualmente”.\n\n\n6. ¿Las preguntas de reclutamiento se ponen en el portal o en el ATS?\nTambién depende del modelo.\nCaso A: postulación en portal ATS/corporativo\nLas preguntas se configuran en el ATS y se muestran en el formulario del portal de carrera.\nEjemplo:\nATS → Configura preguntas → Portal de postulación → Candidato responde → Respuestas quedan en ficha ATS\nGreenhouse permite agregar preguntas personalizadas a un job post desde la configuración del cargo.  Lever también tiene configuración de preguntas personalizadas en sus job postings. \nCaso B: postulación nativa en Indeed / LinkedIn / portal externo",
             "textHtml": "Escribe aqui el contenido del parrafo. Blabla<br><br><p>Trabajando.com Empresas, por ejemplo, ofrece un ATS propio para publicar ofertas, centralizar candidatos, revisar CVs, agregar observaciones, clasificar postulantes y avanzar entre etapas. <span></span><span></span></p>\n<p>Indeed, en cambio, muestra claramente el modelo de integración con ATS externos: jobs y candidatos se sincronizan entre Indeed y el ATS. <span></span></p>\n<p>Para enseñar bien:</p>\n\nNo digas “el ATS saca los CV desde Laborum”.\nDi: “El ATS puede recibir candidatos desde portales si hay integración; si no, el reclutador trabaja en el portal, descarga/exporta o carga manualmente”.\n\n\n6. ¿Las preguntas de reclutamiento se ponen en el portal o en el ATS?\n<p>También depende del modelo.</p>\nCaso A: postulación en portal ATS/corporativo\n<p>Las preguntas se configuran en el ATS y se muestran en el formulario del portal de carrera.</p>\n<p>Ejemplo:</p>\nATS → Configura preguntas → Portal de postulación → Candidato responde → Respuestas quedan en ficha ATS\n<p>Greenhouse permite agregar preguntas personalizadas a un job post desde la configuración del cargo. <span></span> Lever también tiene configuración de preguntas personalizadas en sus job postings. <span></span></p>\nCaso B: postulación nativa en Indeed / LinkedIn / portal externo"
           }
+        },
+        {
+          "id": "b-1782868063964-71",
+          "type": "statement",
+          "content": {
+            "text": "You're the master of your life, the captain of your ship. Steer it with intention.",
+            "textHtml": "You're the master of your life, the captain of your ship. Steer it with intention.",
+            "showDivider": true,
+            "width": "narrow"
+          }
+        },
+        {
+          "id": "b-1782868079505-383",
+          "type": "quiz_fill_blank",
+          "content": {
+            "question": "Completa la frase",
+            "prompt": "La pieza que reconoce el LMS es el archivo ____.",
+            "answers": [
+              "imsmanifest.xml"
+            ],
+            "caseSensitive": false,
+            "required": true,
+            "feedbackCorrect": "Correcto.",
+            "feedbackCorrectHtml": "Correcto.",
+            "feedbackIncorrect": "Revisa la respuesta e intenta nuevamente.",
+            "feedbackIncorrectHtml": "Revisa la respuesta e intenta nuevamente."
+          }
+        },
+        {
+          "id": "b-1782868082501-985",
+          "type": "quiz_matching",
+          "content": {
+            "question": "Relaciona cada concepto con su descripcion",
+            "pairs": [
+              {
+                "prompt": "SCORM",
+                "match": "Paquete que conversa con el LMS"
+              },
+              {
+                "prompt": "Manifest",
+                "match": "Archivo que describe el contenido"
+              }
+            ],
+            "required": true,
+            "feedbackCorrect": "Correcto.",
+            "feedbackCorrectHtml": "Correcto.",
+            "feedbackIncorrect": "Revisa las coincidencias e intenta nuevamente.",
+            "feedbackIncorrectHtml": "Revisa las coincidencias e intenta nuevamente."
+          }
+        },
+        {
+          "id": "b-1782868090238-9",
+          "type": "quiz_multiple_response",
+          "content": {
+            "question": "Selecciona todas las alternativas correctas",
+            "options": [
+              "Respuesta correcta",
+              "Otra respuesta correcta",
+              "Distractor"
+            ],
+            "correctAnswers": [
+              0,
+              1
+            ],
+            "required": true,
+            "feedbackCorrect": "Correcto.",
+            "feedbackCorrectHtml": "Correcto.",
+            "feedbackIncorrect": "Revisa las alternativas e intenta nuevamente.",
+            "feedbackIncorrectHtml": "Revisa las alternativas e intenta nuevamente."
+          }
+        },
+        {
+          "id": "b-1782868090888-861",
+          "type": "quiz_single_choice",
+          "content": {
+            "question": "Escribe la pregunta",
+            "options": [
+              "Alternativa correcta",
+              "Alternativa incorrecta",
+              "Otra alternativa"
+            ],
+            "correctAnswer": 0,
+            "required": true,
+            "feedbackCorrect": "Correcto.",
+            "feedbackCorrectHtml": "Correcto.",
+            "feedbackIncorrect": "Revisa la respuesta e intenta nuevamente.",
+            "feedbackIncorrectHtml": "Revisa la respuesta e intenta nuevamente."
+          }
         }
       ]
     },

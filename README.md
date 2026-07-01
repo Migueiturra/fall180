@@ -9,8 +9,10 @@ Este primer hito no busca ser una plataforma completa. Su objetivo es probar la 
 ## Que incluye
 
 - Un curso de ejemplo en JSON.
+- Frontend de autoria en React + Vite + Tailwind CSS.
+- Componentes accesibles con Radix UI e iconos con Lucide.
 - Un runtime web estatico que lee `course-data.json`.
-- Bloques: heading, paragraph, image-text, embed, HTML custom, divider y quiz simple.
+- Bloques: heading, paragraph, image-text, statement, embed, HTML custom, divider, continuar y preguntas tipo Rise.
 - Editor de texto enriquecido para contenido: negrita, cursiva, subrayado y colores.
 - Sistema visual interno para una interfaz mas pulida sin depender de CDN.
 - Tracking SCORM 1.2 basico:
@@ -27,6 +29,11 @@ authoring-scorm-builder-mvp/
   course/
     course-data.json
   src/
+    app/
+      ui/
+        main.tsx
+        styles.css
+      server.js
     runtime/
       index.html
       main.js
@@ -63,7 +70,9 @@ dist/curso-demo-scorm.zip
 Desde la carpeta del proyecto:
 
 ```powershell
-& "C:\Users\PC\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe" .\src\app\server.js
+npm install
+npm run build
+npm start
 ```
 
 Luego abre:
@@ -74,17 +83,26 @@ http://localhost:4173
 
 Desde esa pantalla puedes editar el curso, guardar los cambios y exportar nuevamente el ZIP SCORM.
 
+Para desarrollo de interfaz tambien puedes usar Vite:
+
+```powershell
+npm run dev
+```
+
+Vite abre el frontend en `http://localhost:5173` y usa el servidor local `http://localhost:4173` como backend.
+
 ## Avance actual de la plataforma
 
 La plataforma local ya permite:
 
 - Editar datos generales del curso.
+- Gestionar cursos desde dashboard.
 - Crear y ordenar lecciones.
 - Crear y ordenar bloques.
 - Editar textos con formato enriquecido.
 - Embeber videos o recursos externos con opciones de tamano, proporcion y marco.
 - Insertar HTML custom en un iframe aislado.
-- Ver vista previa.
+- Ver vista previa con panel lateral.
 - Guardar el curso como JSON.
 - Exportar SCORM 1.2 desde la interfaz.
 
@@ -99,4 +117,4 @@ La plataforma local ya permite:
 
 ## Siguiente paso recomendado
 
-Despues de validar el ZIP en Moodle, el siguiente hito es crear un editor visual simple que escriba el mismo formato `course-data.json`.
+El siguiente hito recomendado es profundizar el editor React: plantillas visuales por bloque, temas de curso, banco de preguntas y persistencia en base de datos.
