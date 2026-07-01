@@ -24,6 +24,7 @@ import {
   Upload,
   Video
 } from "lucide-react";
+import demoCourseData from "../../../course/courses/curso-demo-scorm.json";
 import "./styles.css";
 
 type BlockType =
@@ -70,6 +71,8 @@ type CourseBlock = {
 };
 
 const colors = ["#181833", "#3C3C59", "#7A7A8C", "#8C8CBF", "#8182F2", "#2F6FED", "#119C8D", "#D14D3F", "#F2A93B"];
+const demoCourse = demoCourseData as Course;
+const staticCoursesKey = "fall180-static-courses";
 
 const blockTools: Array<{ type: BlockType; label: string; icon: React.ReactNode }> = [
   { type: "heading", label: "Titulo", icon: <BookOpen size={15} /> },
@@ -92,6 +95,110 @@ function uid(prefix: string) {
 
 function getCourseId() {
   return new URLSearchParams(window.location.search).get("course") || "curso-demo-scorm";
+}
+
+function isStaticDeploy() {
+  return window.location.hostname.endsWith("github.io");
+}
+
+function courseSummary(course: Course): CourseSummary {
+  return {
+    id: course.id || "curso-demo-scorm",
+    title: course.title,
+    description: course.description,
+    lessons: course.lessons?.length || 0
+  };
+}
+
+function readStaticCourses(): Course[] {
+  try {
+    const saved = window.localStorage.getItem(staticCoursesKey);
+    if (saved) return JSON.parse(saved);
+  } catch {
+    // Local storage can be unavailable in strict browser modes.
+  }
+  return [structuredClone(demoCourse)];
+}
+
+function writeStaticCourses(courses: Course[]) {
+  try {
+    window.localStorage.setItem(staticCoursesKey, JSON.stringify(courses));
+  } catch {
+    // Demo mode remains read-only if localStorage is blocked.
+  }
+}
+
+async function loadCourseList(): Promise<CourseSummary[]> {
+  if (!isStaticDeploy()) {
+    try {
+      const response = await fetch("/api/courses");
+      if (response.ok) {
+        const result = await response.json();
+        return result.courses || [];
+      }
+    } catch {
+      // Fall back to static demo data.
+    }
+  }
+  return readStaticCourses().map(courseSummary);
+}
+
+async function loadCourseById(id: string): Promise<Course> {
+  if (!isStaticDeploy()) {
+    try {
+      const response = await fetch(`/api/course?id=${encodeURIComponent(id)}`);
+      if (response.ok) return response.json();
+    } catch {
+      // Fall back to static demo data.
+    }
+  }
+  return structuredClone(readStaticCourses().find((course) => course.id === id) || demoCourse);
+}
+
+async function createCourseRecord(): Promise<CourseSummary> {
+  if (!isStaticDeploy()) {
+    const response = await fetch("/api/courses", { method: "POST" });
+    if (response.ok) {
+      const result = await response.json();
+      if (result.ok) return result.course;
+    }
+  }
+
+  const courses = readStaticCourses();
+  const course = structuredClone(demoCourse);
+  course.id = `nuevo-curso-${Date.now()}`;
+  course.title = "Nuevo curso";
+  course.description = "Describe el objetivo de este curso.";
+  course.lessons = [{
+    id: uid("lesson"),
+    title: "Bienvenida",
+    blocks: [defaultBlock("heading"), defaultBlock("paragraph")]
+  }];
+  courses.push(course);
+  writeStaticCourses(courses);
+  return courseSummary(course);
+}
+
+async function saveCourseRecord(course: Course): Promise<{ ok: boolean; error?: string }> {
+  if (!isStaticDeploy()) {
+    try {
+      const response = await fetch(`/api/course?id=${encodeURIComponent(course.id)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(course)
+      });
+      if (response.ok) return response.json();
+    } catch {
+      // Fall back to local demo persistence.
+    }
+  }
+
+  const courses = readStaticCourses();
+  const index = courses.findIndex((item) => item.id === course.id);
+  if (index >= 0) courses[index] = course;
+  else courses.push(course);
+  writeStaticCourses(courses);
+  return { ok: true };
 }
 
 function htmlToText(value = "") {
@@ -131,16 +238,16 @@ function App() {
 function AppHeader({ section }: { section: "dashboard" | "editor" | "preview" }) {
   return (
     <header className="sticky top-0 z-30 flex h-[76px] items-center justify-between border-b border-line bg-white/90 px-6 backdrop-blur-xl">
-      <a className="flex items-center gap-3 no-underline" href="/courses.html">
+      <a className="flex items-center gap-3 no-underline" href="./courses.html">
         <span className="grid size-5 place-items-center rounded-full bg-violet/20">
           <span className="size-2 rounded-full bg-violet" />
         </span>
         <strong className="text-lg text-ink">Fall 180</strong>
       </a>
       <nav className="flex items-center gap-6 text-sm font-extrabold text-ink">
-        <a className={section === "dashboard" ? "border-b-2 border-violet pb-2" : "pb-2"} href="/courses.html">Dashboard</a>
-        <a className={section === "editor" ? "border-b-2 border-violet pb-2" : "pb-2"} href="/">Editor</a>
-        <a className={section === "preview" ? "border-b-2 border-violet pb-2" : "pb-2"} href={`/preview.html?course=${getCourseId()}`}>Preview</a>
+        <a className={section === "dashboard" ? "border-b-2 border-violet pb-2" : "pb-2"} href="./courses.html">Dashboard</a>
+        <a className={section === "editor" ? "border-b-2 border-violet pb-2" : "pb-2"} href={`./?course=${getCourseId()}`}>Editor</a>
+        <a className={section === "preview" ? "border-b-2 border-violet pb-2" : "pb-2"} href={`./preview.html?course=${getCourseId()}`}>Preview</a>
       </nav>
       <div className="flex items-center gap-2" id="header-actions" />
     </header>
@@ -153,25 +260,22 @@ function DashboardApp() {
   const [deleteTarget, setDeleteTarget] = useState<CourseSummary | null>(null);
 
   async function load() {
-    const response = await fetch("/api/courses");
-    if (response.ok) {
-      const result = await response.json();
-      setCourses(result.courses || []);
-      return;
-    }
-    const fallback = await fetch("/api/course");
-    const course = await fallback.json();
-    setCourses([{ id: course.id || "curso-demo-scorm", title: course.title, description: course.description, lessons: course.lessons?.length || 0 }]);
+    setCourses(await loadCourseList());
   }
 
   async function createCourse() {
-    const response = await fetch("/api/courses", { method: "POST" });
-    const result = await response.json();
-    if (result.ok) window.location.href = `/?course=${encodeURIComponent(result.course.id)}`;
+    const course = await createCourseRecord();
+    window.location.href = `./?course=${encodeURIComponent(course.id)}`;
   }
 
   async function deleteCourse() {
     if (!deleteTarget) return;
+    if (isStaticDeploy()) {
+      writeStaticCourses(readStaticCourses().filter((course) => course.id !== deleteTarget.id));
+      setDeleteTarget(null);
+      load();
+      return;
+    }
     const response = await fetch(`/api/courses/${encodeURIComponent(deleteTarget.id)}`, { method: "DELETE" });
     const result = await response.json();
     if (result.ok) {
@@ -238,8 +342,8 @@ function CourseCard({ course, index, onDelete }: { course: CourseSummary; index:
         <p className="mt-2 min-h-12 text-sm leading-relaxed text-steel">{course.description}</p>
         <div className="my-4 grid gap-1 text-xs font-bold text-steel"><span>Course · {course.lessons} Lessons</span><span>Updated today</span></div>
         <div className="flex flex-wrap gap-2">
-          <a className="rounded-md border border-line px-3 py-2 text-sm font-extrabold" href={`/?course=${course.id}`}>Editar</a>
-          <a className="rounded-md border border-line px-3 py-2 text-sm font-extrabold" href={`/preview.html?course=${course.id}`}>Preview</a>
+          <a className="rounded-md border border-line px-3 py-2 text-sm font-extrabold" href={`./?course=${course.id}`}>Editar</a>
+          <a className="rounded-md border border-line px-3 py-2 text-sm font-extrabold" href={`./preview.html?course=${course.id}`}>Preview</a>
           <button className="rounded-md border border-red-100 px-3 py-2 text-sm font-extrabold text-red-600" onClick={onDelete}><Trash2 size={14} /></button>
         </div>
       </div>
@@ -274,9 +378,7 @@ function EditorApp() {
   const courseId = getCourseId();
 
   async function load() {
-    const response = await fetch(`/api/course?id=${encodeURIComponent(courseId)}`);
-    const loaded = await response.json();
-    setCourse(loaded);
+    setCourse(await loadCourseById(courseId));
   }
 
   useEffect(() => {
@@ -295,12 +397,7 @@ function EditorApp() {
 
   async function save() {
     if (!course) return false;
-    const response = await fetch(`/api/course?id=${encodeURIComponent(course.id)}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(course)
-    });
-    const result = await response.json();
+    const result = await saveCourseRecord(course);
     if (!result.ok) {
       setToast(result.error || "No se pudo guardar.");
       return false;
@@ -312,6 +409,11 @@ function EditorApp() {
   }
 
   async function exportScorm() {
+    if (isStaticDeploy()) {
+      setToast("La exportacion SCORM requiere ejecutar el proyecto localmente con npm start.");
+      window.setTimeout(() => setToast(""), 3600);
+      return;
+    }
     if (dirty) {
       const saved = await save();
       if (!saved) return;
@@ -331,8 +433,8 @@ function EditorApp() {
       <AppHeader section="editor" />
       <div className="fixed right-6 top-5 z-40 flex gap-2">
         <span className="grid h-10 place-items-center rounded-full border border-line bg-white px-4 text-xs font-extrabold text-ink">{dirty ? "Sin guardar" : "Guardado"}</span>
-        <a className="grid h-10 place-items-center rounded-md border border-line bg-white px-4 text-sm font-extrabold" href={`/courses.html`}>Cursos</a>
-        <a className="grid h-10 place-items-center rounded-md border border-line bg-white px-4 text-sm font-extrabold" href={`/preview.html?course=${course.id}`}>Vista previa</a>
+        <a className="grid h-10 place-items-center rounded-md border border-line bg-white px-4 text-sm font-extrabold" href={`./courses.html`}>Cursos</a>
+        <a className="grid h-10 place-items-center rounded-md border border-line bg-white px-4 text-sm font-extrabold" href={`./preview.html?course=${course.id}`}>Vista previa</a>
         <button onClick={save} className="inline-flex h-10 items-center gap-2 rounded-md bg-mist px-4 text-sm font-extrabold"><Save size={16} /> Guardar</button>
         <button onClick={exportScorm} className="inline-flex h-10 items-center gap-2 rounded-md bg-ink px-4 text-sm font-extrabold text-white"><Upload size={16} /> Exportar SCORM</button>
       </div>
@@ -515,7 +617,7 @@ function PreviewApp() {
   const [course, setCourse] = useState<Course | null>(null);
   const [lessonIndex, setLessonIndex] = useState(0);
   useEffect(() => {
-    fetch(`/api/course?id=${getCourseId()}`).then((response) => response.json()).then(setCourse);
+    loadCourseById(getCourseId()).then(setCourse);
   }, []);
   if (!course) return <div className="grid min-h-screen place-items-center text-sm font-bold text-steel">Cargando vista previa...</div>;
   const lesson = course.lessons[lessonIndex] || course.lessons[0];
@@ -525,7 +627,7 @@ function PreviewApp() {
         <div className="bg-gradient-to-br from-plum to-ink p-8 text-white"><p className="text-xs font-black uppercase tracking-[0.12em]">Course preview</p><h1 className="mt-6 text-3xl font-black">{course.title}</h1><p className="mt-7 text-sm font-black">50% COMPLETE</p><div className="mt-3 h-1 bg-white/35"><i className="block h-full w-1/2 bg-white" /></div></div>
         <nav className="grid gap-2 p-5">{course.lessons.map((item, index) => <button key={item.id} onClick={() => setLessonIndex(index)} className={`grid grid-cols-[28px_1fr_auto] items-center gap-3 rounded-md px-3 py-3 text-left ${index === lessonIndex ? "bg-mist" : ""}`}><span className="grid size-6 place-items-center rounded-full border border-line text-sm font-bold">{index + 1}</span><strong>{item.title}</strong><small className="font-bold text-steel">{index <= lessonIndex ? "Disponible" : "Bloqueada"}</small></button>)}</nav>
       </aside>
-      <main className="p-10"><a className="mb-8 inline-flex rounded-md border border-line px-4 py-2 font-extrabold" href={`/?course=${course.id}`}>Volver al editor</a><section className="mx-auto max-w-5xl"><p className="text-xs font-black uppercase tracking-[0.12em] text-violet">Unidad {lessonIndex + 1} de {course.lessons.length}</p><h2 className="mb-8 text-4xl font-black tracking-[-0.04em]">{lesson.title}</h2><div className="grid gap-7">{lesson.blocks.map((block) => <div className="fade-up" key={block.id}><BlockPreview block={block} /></div>)}</div>{lessonIndex < course.lessons.length - 1 ? <div className="mt-8 rounded-lg border border-dashed border-violet/40 bg-mist p-6 text-center"><button onClick={() => setLessonIndex(lessonIndex + 1)} className="rounded-md bg-ink px-5 py-3 font-extrabold text-white">Ir a la siguiente unidad</button></div> : null}</section></main>
+      <main className="p-10"><a className="mb-8 inline-flex rounded-md border border-line px-4 py-2 font-extrabold" href={`./?course=${course.id}`}>Volver al editor</a><section className="mx-auto max-w-5xl"><p className="text-xs font-black uppercase tracking-[0.12em] text-violet">Unidad {lessonIndex + 1} de {course.lessons.length}</p><h2 className="mb-8 text-4xl font-black tracking-[-0.04em]">{lesson.title}</h2><div className="grid gap-7">{lesson.blocks.map((block) => <div className="fade-up" key={block.id}><BlockPreview block={block} /></div>)}</div>{lessonIndex < course.lessons.length - 1 ? <div className="mt-8 rounded-lg border border-dashed border-violet/40 bg-mist p-6 text-center"><button onClick={() => setLessonIndex(lessonIndex + 1)} className="rounded-md bg-ink px-5 py-3 font-extrabold text-white">Ir a la siguiente unidad</button></div> : null}</section></main>
     </div>
   );
 }

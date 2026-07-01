@@ -5,7 +5,7 @@
   "description": "Plataforma local MVP para crear cursos por bloques y exportarlos como SCORM 1.2.",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/prepare-pages.js",
     "start": "node src/app/server.js",
     "export:scorm": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/export-scorm.ps1"
   },
