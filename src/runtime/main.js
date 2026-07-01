@@ -116,6 +116,12 @@
     return "margin-left:auto;margin-right:auto;";
   }
 
+  function customHtmlVerticalJustify(content) {
+    if (content.htmlVerticalAlign === "top") return "flex-start";
+    if (content.htmlVerticalAlign === "bottom") return "flex-end";
+    return "center";
+  }
+
   window.addEventListener("message", function (event) {
     if (!event.data || event.data.type !== "pulsestudio-html-height") return;
     var frame = document.querySelector('[data-html-frame="' + String(event.data.id).replace(/"/g, "") + '"]');
@@ -125,10 +131,11 @@
 
   function customHtmlSrcDoc(content, frameId) {
     var tailwind = content.enableTailwind === false ? "" : '<script src="https://cdn.tailwindcss.com"><\\/script>';
+    var verticalJustify = customHtmlVerticalJustify(content);
     return '<!doctype html><html><head><base target="_blank"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">' +
       tailwind +
-      '<style>html,body{margin:0;min-height:0;background:transparent;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}body{display:flow-root;overflow:hidden}*,*::before,*::after{box-sizing:border-box}</style>' +
-      '</head><body>' + (content.html || "") +
+      '<style>html,body{margin:0;min-height:100%;background:transparent;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}body{display:flex;flex-direction:column;justify-content:' + verticalJustify + ';min-height:100vh;overflow:hidden}#pulsestudio-html-root{width:100%}*,*::before,*::after{box-sizing:border-box}</style>' +
+      '</head><body><main id="pulsestudio-html-root">' + (content.html || "") + '</main>' +
       '<script>const measureHeight=()=>{const children=[...document.body.querySelectorAll("*")].filter((element)=>![\"SCRIPT\",\"STYLE\"].includes(element.tagName));if(!children.length)return 120;const bodyTop=document.body.getBoundingClientRect().top;return Math.ceil(children.reduce((height,element)=>{const rect=element.getBoundingClientRect();const styles=window.getComputedStyle(element);if(!rect.width&&!rect.height)return height;return Math.max(height,rect.bottom-bodyTop+parseFloat(styles.marginBottom||"0"));},document.body.scrollHeight)+2);};const sendHeight=()=>parent.postMessage({type:"pulsestudio-html-height",id:"' + escapeHtml(frameId) + '",height:measureHeight()},"*");window.addEventListener("load",sendHeight);document.querySelectorAll("img").forEach((image)=>image.addEventListener("load",sendHeight));new ResizeObserver(sendHeight).observe(document.body);new ResizeObserver(sendHeight).observe(document.documentElement);document.addEventListener("click",(event)=>{const link=event.target.closest&&event.target.closest("a");if(!link)return;const href=link.getAttribute("href")||"";if(href==="#"||href.startsWith("#"))event.preventDefault();});setTimeout(sendHeight,200);setTimeout(sendHeight,800);<\\/script>' +
       '</body></html>';
   }
