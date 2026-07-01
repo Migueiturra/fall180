@@ -1166,15 +1166,16 @@ function customHtmlSrcDoc(content: Record<string, any>, frameId: string) {
 <main id="pulsestudio-html-root">${content.html || ""}</main>
 <script>
   const measureHeight = () => {
-    const children = [...document.body.querySelectorAll("*")].filter((element) => !["SCRIPT","STYLE"].includes(element.tagName));
-    if (!children.length) return 120;
-    const bodyTop = document.body.getBoundingClientRect().top;
+    const root = document.getElementById("pulsestudio-html-root");
+    if (!root) return 120;
+    const rootRect = root.getBoundingClientRect();
+    const children = [root, ...root.querySelectorAll("*")].filter((element) => !["SCRIPT","STYLE"].includes(element.tagName));
     return Math.ceil(children.reduce((height, element) => {
       const rect = element.getBoundingClientRect();
       const styles = window.getComputedStyle(element);
       if (!rect.width && !rect.height) return height;
-      return Math.max(height, rect.bottom - bodyTop + parseFloat(styles.marginBottom || "0"));
-    }, document.body.scrollHeight) + 2);
+      return Math.max(height, rect.bottom - rootRect.top + parseFloat(styles.marginBottom || "0"));
+    }, Math.max(root.scrollHeight, rootRect.height)) + 2);
   };
   const sendHeight = () => parent.postMessage({ type: "pulsestudio-html-height", id: "${frameId}", height: measureHeight() }, "*");
   window.addEventListener("load", sendHeight);
