@@ -351,6 +351,77 @@ h1 {
   margin: 34px 0;
 }
 
+.image-gallery {
+  display: grid;
+  gap: 12px;
+}
+
+.image-gallery > div {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+}
+
+.image-gallery img {
+  border: 1px solid rgba(60, 60, 89, 0.12);
+  border-radius: 8px;
+  display: block;
+  min-width: 100%;
+  object-fit: contain;
+  scroll-snap-align: center;
+  width: 100%;
+}
+
+.image-gallery-small img { max-height: 180px; }
+.image-gallery-medium img { max-height: 300px; }
+.image-gallery-large img { max-height: 440px; }
+.image-gallery-full img { max-height: none; }
+
+.flip-card-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 12px;
+}
+
+.flip-card,
+.accordion-item {
+  background: #fff;
+  border: 1px solid rgba(60, 60, 89, 0.12);
+  border-radius: 8px;
+  padding: 18px;
+}
+
+.flip-card summary,
+.accordion-item summary {
+  color: #181833;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 820;
+}
+
+.flip-card p,
+.accordion-item p {
+  margin-top: 12px;
+}
+
+.accordion-block {
+  display: grid;
+  gap: 10px;
+}
+
+.list-block ul,
+.list-block ol {
+  color: #303041;
+  display: grid;
+  font-size: 18px;
+  gap: 10px;
+  line-height: 1.5;
+  margin: 12px 0 0;
+  padding-left: 26px;
+}
+
 .media-block {
   display: grid;
   gap: 10px;
@@ -545,6 +616,25 @@ h1 {
   background: #181833;
 }
 
+.continue-panel-clean {
+  background: transparent;
+  border: 0;
+  padding: 12px 0;
+}
+
+.continue-small {
+  width: auto;
+}
+
+.continue-medium {
+  max-width: 320px;
+  width: 100%;
+}
+
+.continue-full {
+  width: 100%;
+}
+
 .reveal-block {
   animation: fadeUp 360ms ease both;
 }
@@ -585,6 +675,10 @@ h1 {
   }
 
   .matching-row {
+    grid-template-columns: 1fr;
+  }
+
+  .flip-card-grid {
     grid-template-columns: 1fr;
   }
 

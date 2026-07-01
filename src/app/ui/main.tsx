@@ -5,6 +5,9 @@ import * as Tooltip from "@radix-ui/react-tooltip";
 import {
   ArrowDown,
   ArrowUp,
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
   BookOpen,
   Check,
   ChevronRight,
@@ -15,6 +18,11 @@ import {
   Image,
   LayoutDashboard,
   ListChecks,
+  List,
+  ListOrdered,
+  GalleryHorizontalEnd,
+  MousePointerClick,
+  Minus,
   PanelLeft,
   Pencil,
   Plus,
@@ -40,7 +48,11 @@ type BlockType =
   | "heading"
   | "paragraph"
   | "image_text"
+  | "image_gallery"
   | "statement"
+  | "flip_cards"
+  | "accordion"
+  | "list"
   | "embed"
   | "custom_html"
   | "quiz_single_choice"
@@ -55,6 +67,8 @@ type CourseSummary = {
   title: string;
   description: string;
   lessons: number;
+  durationMinutes?: number;
+  updatedAt?: string;
 };
 
 type Lesson = {
@@ -86,17 +100,29 @@ const staticCoursesKey = "fall180-static-courses";
 const blockTools: Array<{ type: BlockType; label: string; icon: React.ReactNode }> = [
   { type: "heading", label: "Titulo", icon: <BookOpen size={15} /> },
   { type: "paragraph", label: "Parrafo", icon: <PanelLeft size={15} /> },
-  { type: "image_text", label: "Imagen", icon: <Image size={15} /> },
+  { type: "image_text", label: "Imagen + texto", icon: <Image size={15} /> },
+  { type: "image_gallery", label: "Solo imagen", icon: <GalleryHorizontalEnd size={15} /> },
   { type: "statement", label: "Statement", icon: <Copy size={15} /> },
+  { type: "flip_cards", label: "Tarjetas", icon: <MousePointerClick size={15} /> },
+  { type: "accordion", label: "Acordeon", icon: <RowsIcon /> },
+  { type: "list", label: "Lista", icon: <List size={15} /> },
   { type: "embed", label: "Embed", icon: <Video size={15} /> },
   { type: "custom_html", label: "HTML", icon: <Code2 size={15} /> },
   { type: "quiz_single_choice", label: "Opcion unica", icon: <FileQuestion size={15} /> },
   { type: "quiz_multiple_response", label: "Multiple", icon: <ListChecks size={15} /> },
   { type: "quiz_fill_blank", label: "Completar", icon: <Pencil size={15} /> },
-  { type: "quiz_matching", label: "Coincidencia", icon: <ChevronRight size={15} /> },
+  { type: "quiz_matching", label: "Coincidencia", icon: <ShuffleIcon /> },
   { type: "continue_button", label: "Continuar", icon: <ChevronRight size={15} /> },
-  { type: "divider", label: "Separador", icon: <PanelLeft size={15} /> }
+  { type: "divider", label: "Separador", icon: <Minus size={15} /> }
 ];
+
+function RowsIcon() {
+  return <span className="grid gap-[2px]"><i className="block h-[2px] w-[14px] rounded bg-current" /><i className="block h-[2px] w-[14px] rounded bg-current" /><i className="block h-[2px] w-[14px] rounded bg-current" /></span>;
+}
+
+function ShuffleIcon() {
+  return <span className="text-[13px] font-black leading-none">↔</span>;
+}
 
 function uid(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
@@ -120,8 +146,19 @@ function courseSummary(course: Course): CourseSummary {
     id: course.id || "curso-demo-scorm",
     title: course.title,
     description: course.description,
-    lessons: course.lessons?.length || 0
+    lessons: course.lessons?.length || 0,
+    durationMinutes: Number(course.metadata?.durationMinutes) || estimateDuration(course),
+    updatedAt: String(course.metadata?.updatedAt || "Actualizado hoy")
   };
+}
+
+function estimateDuration(course: Course) {
+  const blockCount = course.lessons?.reduce((sum, lesson) => sum + (lesson.blocks?.length || 0), 0) || 0;
+  return Math.max(3, Math.round(blockCount * 1.5));
+}
+
+function duplicateBlock(block: CourseBlock): CourseBlock {
+  return { ...structuredClone(block), id: uid("b") };
 }
 
 function readStaticCourses(): Course[] {
@@ -308,16 +345,20 @@ function defaultBlock(type: BlockType): CourseBlock {
   if (type === "heading") return { id: uid("b"), type, content: { text: "Nuevo titulo", textHtml: "Nuevo titulo" } };
   if (type === "paragraph") return { id: uid("b"), type, content: { text: "Escribe aqui el contenido.", textHtml: "Escribe aqui el contenido." } };
   if (type === "image_text") {
-    return { id: uid("b"), type, content: { imageUrl: "assets/demo-learning.svg", imageAlt: "Imagen", title: "Titulo del bloque", text: "Descripcion asociada.", textHtml: "Descripcion asociada." } };
+    return { id: uid("b"), type, content: { imageUrl: "assets/demo-learning.svg", imageAlt: "Imagen", imageSize: 180, title: "Titulo del bloque", text: "Descripcion asociada.", textHtml: "Descripcion asociada." } };
   }
+  if (type === "image_gallery") return { id: uid("b"), type, content: { title: "Imagen", images: [{ url: "assets/demo-learning.svg", alt: "Imagen" }], imageSize: "large" } };
   if (type === "statement") return { id: uid("b"), type, content: { text: "You're the master of your life. Steer it with intention.", textHtml: "You're the master of your life. Steer it with intention.", showDivider: true, width: "normal" } };
+  if (type === "flip_cards") return { id: uid("b"), type, content: { title: "Tarjetas interactivas", cards: [{ front: "Concepto", back: "Texto que aparece al hacer clic." }, { front: "Idea clave", back: "Otra explicacion breve." }] } };
+  if (type === "accordion") return { id: uid("b"), type, content: { title: "Acordeon", items: [{ title: "Pregunta o tema", text: "Contenido desplegable." }, { title: "Otro tema", text: "Mas informacion." }] } };
+  if (type === "list") return { id: uid("b"), type, content: { title: "Lista", listStyle: "bullet", items: ["Primer punto", "Segundo punto", "Tercer punto"] } };
   if (type === "embed") return { id: uid("b"), type, content: { title: "Video o recurso embebido", url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", caption: "", size: "wide", aspectRatio: "16 / 9", hasFrame: true } };
   if (type === "custom_html") return { id: uid("b"), type, content: { title: "Contenido HTML custom", html: "<div style='padding:24px;text-align:center'><h2>Bloque HTML</h2><p>Escribe tu codigo.</p></div>", size: "wide", aspectRatio: "16 / 9", hasFrame: true } };
   if (type === "quiz_single_choice") return { id: uid("b"), type, content: { question: "Escribe la pregunta", options: ["Alternativa correcta", "Alternativa incorrecta"], correctAnswer: 0, required: true, feedbackCorrect: "Correcto.", feedbackIncorrect: "Revisa la respuesta." } };
   if (type === "quiz_multiple_response") return { id: uid("b"), type, content: { question: "Selecciona todas las alternativas correctas", options: ["Respuesta correcta", "Otra respuesta correcta", "Distractor"], correctAnswers: [0, 1], required: true, feedbackCorrect: "Correcto.", feedbackIncorrect: "Revisa las alternativas." } };
   if (type === "quiz_fill_blank") return { id: uid("b"), type, content: { question: "Completa la frase", prompt: "La pieza que reconoce el LMS es el archivo ____.", answers: ["imsmanifest.xml"], caseSensitive: false, required: true, feedbackCorrect: "Correcto.", feedbackIncorrect: "Revisa la respuesta." } };
   if (type === "quiz_matching") return { id: uid("b"), type, content: { question: "Relaciona cada concepto con su descripcion", pairs: [{ prompt: "SCORM", match: "Paquete que conversa con el LMS" }, { prompt: "Manifest", match: "Archivo que describe el contenido" }], required: true, feedbackCorrect: "Correcto.", feedbackIncorrect: "Revisa las coincidencias." } };
-  if (type === "continue_button") return { id: uid("b"), type, content: { label: "Continuar" } };
+  if (type === "continue_button") return { id: uid("b"), type, content: { label: "Continuar", buttonSize: "medium", buttonColor: "#181833" } };
   return { id: uid("b"), type: "divider", content: {} };
 }
 
@@ -421,7 +462,7 @@ function DashboardApp() {
             <select className="h-11 rounded-md border border-line px-3 text-sm font-semibold"><option>Recent</option><option>Title</option></select>
             <select className="h-11 rounded-md border border-line px-3 text-sm font-semibold"><option>All Content</option><option>Courses</option></select>
           </div>
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-6">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(190px,220px))] gap-4">
             {filtered.map((course, index) => (
               <CourseCard key={course.id} course={course} index={index} onDelete={() => setDeleteTarget(course)} />
             ))}
@@ -435,20 +476,26 @@ function DashboardApp() {
 
 function CourseCard({ course, index, onDelete }: { course: CourseSummary; index: number; onDelete: () => void }) {
   const covers = ["bg-violet", "bg-lavender", "bg-steel", "bg-plum", "bg-ink"];
+  const updated = course.updatedAt?.startsWith("20") ? new Date(course.updatedAt).toLocaleDateString("es-CL") : course.updatedAt || "Actualizado hoy";
   return (
-    <article className="overflow-hidden rounded-lg border border-line bg-white shadow-soft transition hover:-translate-y-0.5 hover:border-violet/50">
-      <div className={`flex h-36 items-end p-5 ${covers[index % covers.length]}`}>
+    <article className="overflow-hidden rounded-md border border-line bg-white shadow-soft transition hover:-translate-y-0.5 hover:border-violet/50">
+      <div className={`flex h-20 items-end p-3 ${covers[index % covers.length]}`}>
         <span className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-black uppercase tracking-[0.08em] text-white">Course</span>
       </div>
-      <div className="p-5">
+      <div className="p-4">
         <div className="flex items-center gap-2 text-xs font-bold text-steel"><span className="grid size-5 place-items-center rounded-full bg-violet/15 text-violet">P</span> PulseStudio</div>
-        <h2 className="mt-3 text-xl font-black leading-tight tracking-[-0.03em] text-ink">{course.title}</h2>
-        <p className="mt-2 min-h-12 text-sm leading-relaxed text-steel">{course.description}</p>
+        <h2 className="mt-2 line-clamp-2 text-base font-black leading-tight tracking-[-0.02em] text-ink">{course.title}</h2>
+        <p className="mt-1.5 line-clamp-2 min-h-9 text-xs leading-relaxed text-steel">{course.description}</p>
+        <div className="my-3 grid grid-cols-2 gap-1 text-[11px] font-bold text-steel">
+          <span>{course.durationMinutes || 3} min</span>
+          <span>{course.lessons} unidades</span>
+          <span className="col-span-2">{updated}</span>
+        </div>
         <div className="my-4 grid gap-1 text-xs font-bold text-steel"><span>Course · {course.lessons} Lessons</span><span>Updated today</span></div>
         <div className="flex flex-wrap gap-2">
-          <a className="rounded-md border border-line px-3 py-2 text-sm font-extrabold" href={`${appRoute("/")}?course=${course.id}`}>Editar</a>
-          <a className="rounded-md border border-line px-3 py-2 text-sm font-extrabold" href={`${appRoute("/preview.html")}?course=${course.id}`}>Preview</a>
-          <button className="rounded-md border border-red-100 px-3 py-2 text-sm font-extrabold text-red-600" onClick={onDelete}><Trash2 size={14} /></button>
+          <a className="rounded-md border border-line px-2.5 py-1.5 text-xs font-extrabold" href={`${appRoute("/")}?course=${course.id}`}>Editar</a>
+          <a className="rounded-md border border-line px-2.5 py-1.5 text-xs font-extrabold" href={`${appRoute("/preview.html")}?course=${course.id}`}>Preview</a>
+          <button className="rounded-md border border-red-100 px-2.5 py-1.5 text-xs font-extrabold text-red-600" onClick={onDelete}><Trash2 size={13} /></button>
         </div>
       </div>
     </article>
@@ -501,11 +548,15 @@ function EditorApp() {
 
   async function save() {
     if (!course) return false;
-    const result = await saveCourseRecord(course);
+    const courseToSave = structuredClone(course);
+    courseToSave.metadata = courseToSave.metadata || {};
+    courseToSave.metadata.updatedAt = new Date().toISOString();
+    const result = await saveCourseRecord(courseToSave);
     if (!result.ok) {
       setToast(result.error || "No se pudo guardar.");
       return false;
     }
+    setCourse(courseToSave);
     setDirty(false);
     setToast("Curso guardado.");
     window.setTimeout(() => setToast(""), 2200);
@@ -595,7 +646,11 @@ function EditorApp() {
           </div>
           <div className="grid gap-2.5 pb-20">
             {lesson.blocks.map((block, index) => (
-              <BlockShell key={block.id} block={block} editing={block.id === editingBlockId} onEdit={() => setEditingBlockId(block.id)} onSave={async () => { await save(); setEditingBlockId(null); }} onMove={(direction) => updateCourse((draft) => moveItem(draft.lessons[lessonIndex].blocks, index, direction))} onDelete={() => updateCourse((draft) => {
+              <BlockShell key={block.id} block={block} editing={block.id === editingBlockId} onEdit={() => setEditingBlockId(block.id)} onSave={async () => { await save(); setEditingBlockId(null); }} onDuplicate={() => updateCourse((draft) => {
+                const copy = duplicateBlock(block);
+                draft.lessons[lessonIndex].blocks.splice(index + 1, 0, copy);
+                setEditingBlockId(copy.id);
+              })} onMove={(direction) => updateCourse((draft) => moveItem(draft.lessons[lessonIndex].blocks, index, direction))} onDelete={() => updateCourse((draft) => {
                 draft.lessons[lessonIndex].blocks.splice(index, 1);
                 setEditingBlockId(null);
               })} onChange={(content) => updateCourse((draft) => { draft.lessons[lessonIndex].blocks[index].content = content; })} />
@@ -627,6 +682,7 @@ function CourseSettingsDialog({ course, onChange }: { course: Course; onChange: 
           <div className="mt-5 rounded-lg border border-line bg-white p-4">
             <Field label="Titulo" value={course.title} onChange={(value) => onChange((draft) => { draft.title = value; })} />
             <TextField label="Descripcion" value={course.description} onChange={(value) => onChange((draft) => { draft.description = value; })} rows={4} />
+            <Field label="Duracion estimada en minutos" type="number" value={String(Number(course.metadata?.durationMinutes) || estimateDuration(course))} onChange={(value) => onChange((draft) => { draft.metadata = draft.metadata || {}; draft.metadata.durationMinutes = Number(value) || estimateDuration(draft); })} />
             <Field label="Puntaje minimo" type="number" value={String(course.scorm?.passingScore || 70)} onChange={(value) => onChange((draft) => { draft.scorm = draft.scorm || {}; draft.scorm.passingScore = Number(value); })} />
           </div>
           <div className="mt-6 flex justify-end">
@@ -705,7 +761,19 @@ function TextField({ label, value, onChange, rows = 3 }: { label: string; value:
   return <label className="mt-4 grid gap-2 text-xs font-extrabold text-steel">{label}<textarea rows={rows} value={value} onChange={(event) => onChange(event.target.value)} className="rounded-md border border-line p-3 text-sm font-semibold text-ink outline-none focus:border-violet" /></label>;
 }
 
-function BlockShell({ block, editing, onEdit, onSave, onMove, onDelete, onChange }: { block: CourseBlock; editing: boolean; onEdit: () => void; onSave: () => void; onMove: (direction: number) => void; onDelete: () => void; onChange: (content: Record<string, any>) => void }) {
+function linesToImages(value: string) {
+  return value.split("\n").map((line) => line.trim()).filter(Boolean).map((url) => ({ url, alt: "Imagen" }));
+}
+
+function imagesToLines(images: Array<{ url: string }>) {
+  return (images || []).map((image) => image.url).join("\n");
+}
+
+function linesToItems(value: string) {
+  return value.split("\n").map((line) => line.trim()).filter(Boolean);
+}
+
+function BlockShell({ block, editing, onEdit, onSave, onDuplicate, onMove, onDelete, onChange }: { block: CourseBlock; editing: boolean; onEdit: () => void; onSave: () => void; onDuplicate: () => void; onMove: (direction: number) => void; onDelete: () => void; onChange: (content: Record<string, any>) => void }) {
   const patch = (next: Record<string, any>) => onChange({ ...block.content, ...next });
   return (
     <article className={`grid grid-cols-[64px_minmax(0,1fr)_auto] overflow-hidden rounded-md border ${editing ? "border-violet bg-white shadow-soft" : "border-line bg-white"}`}>
@@ -725,6 +793,7 @@ function BlockShell({ block, editing, onEdit, onSave, onMove, onDelete, onChange
         )}
       </div>
       <div className="flex items-center gap-0.5 p-3">
+        <IconButton label="Duplicar" onClick={onDuplicate}><Copy size={12} /></IconButton>
         <IconButton label="Subir" onClick={() => onMove(-1)}><ArrowUp size={12} /></IconButton>
         <IconButton label="Bajar" onClick={() => onMove(1)}><ArrowDown size={12} /></IconButton>
         <IconButton label="Borrar" danger onClick={onDelete}><Trash2 size={12} /></IconButton>
@@ -739,7 +808,19 @@ function BlockLayoutControls({ content, onChange }: { content: Record<string, an
     <div className="flex flex-wrap items-center gap-3 border-b border-line bg-[#fbfbff] px-3 py-2">
       <SegmentedControl label="Padding" value={content.blockPadding || "medium"} options={[["none", "Ninguno"], ["small", "Peq."], ["medium", "Med."], ["large", "Grande"]]} onChange={(value) => onChange({ blockPadding: value })} />
       <SegmentedControl label="Ancho" value={content.contentWidth || "m"} options={[["s", "S"], ["m", "M"], ["l", "L"]]} onChange={(value) => onChange({ contentWidth: value })} />
+      <HexColorField label="Fondo" value={content.blockBackground || ""} onChange={(value) => onChange({ blockBackground: value })} allowEmpty />
     </div>
+  );
+}
+
+function HexColorField({ label, value, onChange, allowEmpty = false }: { label: string; value: string; onChange: (value: string) => void; allowEmpty?: boolean }) {
+  const safeValue = /^#[0-9a-fA-F]{6}$/.test(value) ? value : "#ffffff";
+  return (
+    <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.1em] text-steel">
+      {label}
+      <input type="color" value={safeValue} onChange={(event) => onChange(event.target.value)} className="size-7 rounded-md border border-line bg-white p-0" />
+      <input value={value} onChange={(event) => onChange(event.target.value)} placeholder={allowEmpty ? "auto" : "#181833"} className="h-7 w-24 rounded-md border border-line px-2 text-[11px] font-bold normal-case tracking-normal text-ink outline-none focus:border-violet" />
+    </label>
   );
 }
 
@@ -755,8 +836,9 @@ function SegmentedControl({ label, value, options, onChange }: { label: string; 
 }
 
 function BlockContentFrame({ block, children }: { block: CourseBlock; children: React.ReactNode }) {
+  const background = /^#[0-9a-fA-F]{6}$/.test(block.content.blockBackground || "") ? block.content.blockBackground : undefined;
   return (
-    <div className={blockPaddingClass(block.content)}>
+    <div className={`${blockPaddingClass(block.content)} ${background ? "rounded-md" : ""}`} style={background ? { background } : undefined}>
       <div className={`w-full ${blockWidthClass(block.content)} mx-auto`}>
         {children}
       </div>
@@ -766,7 +848,8 @@ function BlockContentFrame({ block, children }: { block: CourseBlock; children: 
 
 function RichTextarea({ label, value, onChange, rows = 4 }: { label: string; value: string; onChange: (html: string) => void; rows?: number }) {
   const editorRef = useRef<HTMLDivElement | null>(null);
-  const [size, setSize] = useState("16px");
+  const [size, setSize] = useState("16");
+  const [hex, setHex] = useState("#181833");
 
   useEffect(() => {
     if (editorRef.current && editorRef.current.innerHTML !== value) editorRef.current.innerHTML = value || "";
@@ -787,11 +870,16 @@ function RichTextarea({ label, value, onChange, rows = 4 }: { label: string; val
     command("fontSize", "7");
     editorRef.current?.querySelectorAll("font[size='7']").forEach((node) => {
       const span = document.createElement("span");
-      span.style.fontSize = nextSize;
+      span.style.fontSize = `${Number(nextSize) || 16}px`;
       span.innerHTML = node.innerHTML;
       node.replaceWith(span);
     });
     sync();
+  }
+
+  function applyColor(nextColor: string) {
+    setHex(nextColor);
+    if (/^#[0-9a-fA-F]{6}$/.test(nextColor)) command("foreColor", nextColor);
   }
 
   return (
@@ -801,13 +889,13 @@ function RichTextarea({ label, value, onChange, rows = 4 }: { label: string; val
         <button type="button" onClick={() => command("bold")} className="grid size-7 place-items-center rounded-md bg-mist text-sm font-black">B</button>
         <button type="button" onClick={() => command("italic")} className="grid size-7 place-items-center rounded-md bg-mist text-sm font-black italic">I</button>
         <button type="button" onClick={() => command("underline")} className="grid size-7 place-items-center rounded-md bg-mist text-sm font-black underline">U</button>
-        <select value={size} onChange={(event) => applySize(event.target.value)} className="h-7 rounded-md border border-line px-2 text-xs font-extrabold">
-          <option value="14px">S</option>
-          <option value="16px">M</option>
-          <option value="20px">L</option>
-          <option value="28px">XL</option>
-        </select>
-        {colors.map((color) => <button key={color} type="button" onClick={() => command("foreColor", color)} className="size-7 rounded-full border border-line" style={{ background: color }} />)}
+        <button type="button" onClick={() => command("justifyLeft")} className="grid size-7 place-items-center rounded-md bg-mist text-sm font-black"><AlignLeft size={14} /></button>
+        <button type="button" onClick={() => command("justifyCenter")} className="grid size-7 place-items-center rounded-md bg-mist text-sm font-black"><AlignCenter size={14} /></button>
+        <button type="button" onClick={() => command("justifyRight")} className="grid size-7 place-items-center rounded-md bg-mist text-sm font-black"><AlignRight size={14} /></button>
+        <input type="number" min="8" max="72" value={size} onChange={(event) => applySize(event.target.value)} className="h-7 w-14 rounded-md border border-line px-2 text-xs font-extrabold" title="Tamano de letra" />
+        {colors.map((color) => <button key={color} type="button" onClick={() => applyColor(color)} className="size-7 rounded-full border border-line" style={{ background: color }} />)}
+        <input type="color" value={/^#[0-9a-fA-F]{6}$/.test(hex) ? hex : "#181833"} onChange={(event) => applyColor(event.target.value)} className="size-7 rounded-full border border-line bg-white p-0" />
+        <input value={hex} onChange={(event) => applyColor(event.target.value)} className="h-7 w-24 rounded-md border border-line px-2 text-xs font-bold outline-none focus:border-violet" placeholder="#181833" />
       </div>
       <div ref={editorRef} contentEditable suppressContentEditableWarning onInput={sync} className="min-h-28 rounded-md border border-line bg-white p-3 text-sm font-semibold leading-7 text-ink outline-none focus:border-violet" style={{ minHeight: `${Math.max(rows, 3) * 34}px` }} />
     </div>
@@ -820,10 +908,14 @@ function BlockForm({ block, onChange }: { block: CourseBlock; onChange: (content
 
   if (block.type === "heading" || block.type === "paragraph") return <RichTextarea label="Texto" value={rich(c, "text")} onChange={(html) => patch({ textHtml: html, text: htmlToText(html) })} rows={block.type === "heading" ? 2 : 7} />;
   if (block.type === "statement") return <RichTextarea label="Statement" value={rich(c, "text")} onChange={(html) => patch({ textHtml: html, text: htmlToText(html) })} rows={5} />;
-  if (block.type === "image_text") return <div className="grid gap-4"><Field label="URL imagen" value={c.imageUrl || ""} onChange={(value) => patch({ imageUrl: value })} /><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} /><RichTextarea label="Texto" value={rich(c, "text")} onChange={(html) => patch({ textHtml: html, text: htmlToText(html) })} /></div>;
+  if (block.type === "image_text") return <div className="grid gap-4"><Field label="URL imagen" value={c.imageUrl || ""} onChange={(value) => patch({ imageUrl: value })} /><Field label="Tamano imagen px" type="number" value={String(c.imageSize || 180)} onChange={(value) => patch({ imageSize: Number(value) || 180 })} /><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} /><RichTextarea label="Texto" value={rich(c, "text")} onChange={(html) => patch({ textHtml: html, text: htmlToText(html) })} /></div>;
+  if (block.type === "image_gallery") return <div className="grid gap-4"><Field label="Titulo opcional" value={c.title || ""} onChange={(value) => patch({ title: value })} /><TextField label="URLs de imagen, una por linea" value={imagesToLines(c.images || [])} onChange={(value) => patch({ images: linesToImages(value) })} rows={5} /><SelectField label="Tamano" value={c.imageSize || "large"} onChange={(value) => patch({ imageSize: value })} options={[["small", "Pequeno"], ["medium", "Mediano"], ["large", "Grande"], ["full", "Ancho completo"]]} /></div>;
+  if (block.type === "flip_cards") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} />{(c.cards || []).map((card: any, index: number) => <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2"><Field label={`Frente ${index + 1}`} value={card.front || ""} onChange={(value) => { const cards = [...(c.cards || [])]; cards[index] = { ...card, front: value }; patch({ cards }); }} /><Field label="Reverso" value={card.back || ""} onChange={(value) => { const cards = [...(c.cards || [])]; cards[index] = { ...card, back: value }; patch({ cards }); }} /><button className="mt-6 grid size-10 place-items-center rounded-md text-red-600 hover:bg-red-50" onClick={() => patch({ cards: (c.cards || []).filter((_: any, i: number) => i !== index) })}><Trash2 size={15} /></button></div>)}<button className="w-fit rounded-md bg-mist px-3 py-2 text-sm font-extrabold" onClick={() => patch({ cards: [...(c.cards || []), { front: "Nueva tarjeta", back: "Texto oculto" }] })}>Agregar tarjeta</button></div>;
+  if (block.type === "accordion") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} />{(c.items || []).map((item: any, index: number) => <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2"><Field label={`Item ${index + 1}`} value={item.title || ""} onChange={(value) => { const items = [...(c.items || [])]; items[index] = { ...item, title: value }; patch({ items }); }} /><Field label="Texto" value={item.text || ""} onChange={(value) => { const items = [...(c.items || [])]; items[index] = { ...item, text: value }; patch({ items }); }} /><button className="mt-6 grid size-10 place-items-center rounded-md text-red-600 hover:bg-red-50" onClick={() => patch({ items: (c.items || []).filter((_: any, i: number) => i !== index) })}><Trash2 size={15} /></button></div>)}<button className="w-fit rounded-md bg-mist px-3 py-2 text-sm font-extrabold" onClick={() => patch({ items: [...(c.items || []), { title: "Nuevo item", text: "Contenido" }] })}>Agregar item</button></div>;
+  if (block.type === "list") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} /><SelectField label="Tipo" value={c.listStyle || "bullet"} onChange={(value) => patch({ listStyle: value })} options={[["bullet", "Puntos"], ["number", "1, 2, 3"]]} /><TextField label="Items, uno por linea" value={(c.items || []).join("\n")} onChange={(value) => patch({ items: linesToItems(value) })} rows={6} /></div>;
   if (block.type === "embed") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} /><Field label="URL" value={c.url || ""} onChange={(value) => patch({ url: value })} /><Field label="Bajada" value={c.caption || ""} onChange={(value) => patch({ caption: value })} /></div>;
   if (block.type === "custom_html") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} /><TextField label="Codigo HTML" value={c.html || ""} onChange={(value) => patch({ html: value })} rows={9} /></div>;
-  if (block.type === "continue_button") return <Field label="Texto del boton" value={c.label || "Continuar"} onChange={(value) => patch({ label: value })} />;
+  if (block.type === "continue_button") return <div className="grid gap-4"><Field label="Texto del boton" value={c.label || "Continuar"} onChange={(value) => patch({ label: value })} /><SelectField label="Tamano boton" value={c.buttonSize || "medium"} onChange={(value) => patch({ buttonSize: value })} options={[["small", "Pequeno"], ["medium", "Mediano"], ["full", "Grande / ancho completo"]]} /><HexColorField label="Color" value={c.buttonColor || "#181833"} onChange={(value) => patch({ buttonColor: value })} /></div>;
   if (block.type === "divider") return <p className="text-sm font-bold text-steel">Este bloque no necesita configuracion.</p>;
   return <QuizForm block={block} onChange={onChange} />;
 }
@@ -857,12 +949,52 @@ function BlockPreview({ block, onQuizStatusChange }: { block: CourseBlock; onQui
   if (block.type === "heading") return <h3 className="text-2xl font-black tracking-[-0.03em]" dangerouslySetInnerHTML={{ __html: rich(c, "text") }} />;
   if (block.type === "paragraph") return <div className="rich-output text-sm leading-7 text-plum" dangerouslySetInnerHTML={{ __html: rich(c, "text") }} />;
   if (block.type === "statement") return <div className="mx-auto grid max-w-2xl gap-4 text-center"><span className="mx-auto h-1 w-44 rounded-full bg-violet" /><div className="text-2xl leading-snug text-ink" dangerouslySetInnerHTML={{ __html: rich(c, "text") }} /></div>;
-  if (block.type === "image_text") return <div className="grid grid-cols-[110px_1fr] items-center gap-4 rounded-md border border-line p-3"><img className="max-w-full" src={resolveAsset(c.imageUrl)} alt={c.imageAlt || ""} /><div><strong className="text-sm">{c.title}</strong><div className="rich-output mt-1.5 text-sm" dangerouslySetInnerHTML={{ __html: rich(c, "text") }} /></div></div>;
+  if (block.type === "image_text") return <div className="grid grid-cols-[auto_1fr] items-center gap-4 rounded-md border border-line p-3"><img className="max-w-full" style={{ width: `${Number(c.imageSize) || 180}px` }} src={resolveAsset(c.imageUrl)} alt={c.imageAlt || ""} /><div><strong className="text-sm">{c.title}</strong><div className="rich-output mt-1.5 text-sm" dangerouslySetInnerHTML={{ __html: rich(c, "text") }} /></div></div>;
+  if (block.type === "image_gallery") return <ImageGalleryPreview content={c} />;
+  if (block.type === "flip_cards") return <FlipCardsPreview content={c} />;
+  if (block.type === "accordion") return <AccordionPreview content={c} />;
+  if (block.type === "list") return <ListPreview content={c} />;
   if (block.type === "embed") return <MediaBlock content={c} />;
   if (block.type === "custom_html") return <iframe className="min-h-48 w-full rounded-md border border-line" sandbox="allow-scripts allow-forms allow-popups" srcDoc={c.html || ""} />;
   if (block.type === "divider") return <hr className="border-line" />;
-  if (block.type === "continue_button") return <div className="rounded-md border border-dashed border-violet/40 bg-mist p-4 text-center"><button className="rounded-md bg-ink px-4 py-2 text-sm font-extrabold text-white">{c.label || "Continuar"}</button></div>;
+  if (block.type === "continue_button") return <ContinueButtonPreview content={c} />;
   return <QuizPreview block={block} onStatusChange={onQuizStatusChange} />;
+}
+
+function imageGalleryClass(size = "large") {
+  if (size === "small") return "max-h-44";
+  if (size === "medium") return "max-h-72";
+  if (size === "full") return "max-h-none";
+  return "max-h-[420px]";
+}
+
+function ImageGalleryPreview({ content }: { content: Record<string, any> }) {
+  const images = content.images || [];
+  return <div className="grid gap-3">{content.title ? <strong className="text-sm">{content.title}</strong> : null}<div className="flex snap-x gap-3 overflow-x-auto rounded-md">{images.map((image: any, index: number) => <img key={`${image.url}-${index}`} src={resolveAsset(image.url)} alt={image.alt || ""} className={`min-w-full snap-center rounded-md border border-line object-contain ${imageGalleryClass(content.imageSize)}`} />)}</div></div>;
+}
+
+function FlipCardsPreview({ content }: { content: Record<string, any> }) {
+  return <div className="grid gap-3">{content.title ? <strong className="text-sm">{content.title}</strong> : null}<div className="grid gap-3 md:grid-cols-2">{(content.cards || []).map((card: any, index: number) => <details key={index} className="group rounded-md border border-line bg-white p-4 shadow-sm"><summary className="cursor-pointer list-none text-sm font-black text-ink">{card.front}</summary><p className="mt-3 text-sm leading-6 text-plum">{card.back}</p></details>)}</div></div>;
+}
+
+function AccordionPreview({ content }: { content: Record<string, any> }) {
+  return <div className="grid gap-2">{content.title ? <strong className="text-sm">{content.title}</strong> : null}{(content.items || []).map((item: any, index: number) => <details key={index} className="rounded-md border border-line bg-white p-3"><summary className="cursor-pointer text-sm font-black text-ink">{item.title}</summary><p className="mt-2 text-sm leading-6 text-plum">{item.text}</p></details>)}</div>;
+}
+
+function ListPreview({ content }: { content: Record<string, any> }) {
+  const Tag = content.listStyle === "number" ? "ol" : "ul";
+  return <div className="grid gap-2">{content.title ? <strong className="text-sm">{content.title}</strong> : null}<Tag className={`grid gap-2 pl-5 text-sm leading-6 text-plum ${content.listStyle === "number" ? "list-decimal" : "list-disc"}`}>{(content.items || []).map((item: string, index: number) => <li key={index}>{item}</li>)}</Tag></div>;
+}
+
+function continueButtonClass(size = "medium") {
+  if (size === "small") return "w-auto px-4";
+  if (size === "full") return "w-full px-5";
+  return "w-full max-w-xs px-5";
+}
+
+function ContinueButtonPreview({ content, disabled = false, onClick }: { content: Record<string, any>; disabled?: boolean; onClick?: () => void }) {
+  const color = /^#[0-9a-fA-F]{6}$/.test(content.buttonColor || "") ? content.buttonColor : "#181833";
+  return <div className="py-3 text-center"><button disabled={disabled} onClick={onClick} style={{ backgroundColor: color }} className={`rounded-md py-2.5 text-sm font-extrabold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-50 ${continueButtonClass(content.buttonSize)}`}>{content.label || "Continuar"}</button></div>;
 }
 
 function QuizPreview({ block, onStatusChange }: { block: CourseBlock; onStatusChange?: (blockId: string, correct: boolean) => void }) {
@@ -986,10 +1118,10 @@ function PreviewApp() {
         if (block.type === "continue_button") {
           if (map[index] !== revealedScreen || revealedScreen >= screenCount(lesson) - 1) return null;
           const enabled = canContinue(map[index]);
-          return <FadeInOnView key={block.id}><BlockContentFrame block={block}><div className="rounded-md border border-dashed border-violet/40 bg-mist p-4 text-center"><button disabled={!enabled} onClick={revealNext} className="rounded-md bg-ink px-4 py-2 text-sm font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-50">{block.content.label || "Continuar"}</button></div></BlockContentFrame></FadeInOnView>;
+          return <FadeInOnView key={block.id}><BlockContentFrame block={block}><ContinueButtonPreview content={block.content} disabled={!enabled} onClick={revealNext} /></BlockContentFrame></FadeInOnView>;
         }
         return <FadeInOnView key={block.id}><BlockContentFrame block={block}><BlockPreview block={block} onQuizStatusChange={(id, correct) => setCorrectQuestions((current) => ({ ...current, [id]: correct }))} /></BlockContentFrame></FadeInOnView>;
-      })}</div>{revealedScreen >= screenCount(lesson) - 1 && lessonIndex < course.lessons.length - 1 ? <div className="mt-8 rounded-lg border border-dashed border-violet/40 bg-mist p-6 text-center"><button disabled={!canFinishLesson()} onClick={() => canFinishLesson() && setLessonIndex(lessonIndex + 1)} className="rounded-md bg-ink px-5 py-3 font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-50">Ir a la siguiente unidad</button></div> : null}</section></main>
+      })}</div>{revealedScreen >= screenCount(lesson) - 1 && lessonIndex < course.lessons.length - 1 ? <div className="mt-8 text-center"><button disabled={!canFinishLesson()} onClick={() => canFinishLesson() && setLessonIndex(lessonIndex + 1)} className="w-full max-w-sm rounded-md bg-ink px-5 py-3 font-extrabold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-50">Ir a la siguiente unidad</button></div> : null}</section></main>
     </div>
   );
 }

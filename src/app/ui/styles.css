@@ -48,6 +48,10 @@ button {
   accent-color: #8182f2;
 }
 
+.my-4.grid.gap-1.text-xs.font-bold.text-steel {
+  display: none;
+}
+
 .fade-up {
   animation: fadeUp 320ms ease both;
 }

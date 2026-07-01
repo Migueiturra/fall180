@@ -256,7 +256,9 @@
   }
 
   function wrapBlock(block, html) {
-    return '<div class="' + blockLayoutClass(block.content || {}) + '">' + html + '</div>';
+    var content = block.content || {};
+    var background = /^#[0-9a-fA-F]{6}$/.test(content.blockBackground || "") ? ' style="background:' + escapeHtml(content.blockBackground) + ';border-radius:8px"' : "";
+    return '<div class="' + blockLayoutClass(content) + '"' + background + '>' + html + '</div>';
   }
 
   function renderBlock(block) {
@@ -270,8 +272,18 @@
 
     if (block.type === "image_text") {
       return '<article class="block image-text reveal-block">' +
-        '<img src="' + escapeHtml(block.content.imageUrl) + '" alt="' + escapeHtml(block.content.imageAlt) + '">' +
+        '<img style="width:' + escapeHtml(String(block.content.imageSize || 180)) + 'px" src="' + escapeHtml(block.content.imageUrl) + '" alt="' + escapeHtml(block.content.imageAlt) + '">' +
         '<div><h3>' + escapeHtml(block.content.title) + '</h3><div class="rich-output">' + richValue(block.content, "text") + '</div></div>' +
+        '</article>';
+    }
+
+    if (block.type === "image_gallery") {
+      var images = (block.content.images || []).map(function (image) {
+        return '<img src="' + escapeHtml(image.url) + '" alt="' + escapeHtml(image.alt || "") + '">';
+      }).join("");
+      return '<article class="block image-gallery image-gallery-' + escapeHtml(block.content.imageSize || "large") + ' reveal-block">' +
+        (block.content.title ? '<strong>' + escapeHtml(block.content.title) + '</strong>' : '') +
+        '<div>' + images + '</div>' +
         '</article>';
     }
 
@@ -279,6 +291,35 @@
       return '<article class="block statement-block statement-' + escapeHtml(block.content.width || "normal") + ' reveal-block">' +
         (block.content.showDivider !== false ? '<span class="statement-rule"></span>' : '') +
         '<div class="rich-output">' + richValue(block.content, "text") + '</div>' +
+        '</article>';
+    }
+
+    if (block.type === "flip_cards") {
+      var cards = (block.content.cards || []).map(function (card) {
+        return '<details class="flip-card"><summary>' + escapeHtml(card.front || "") + '</summary><p>' + escapeHtml(card.back || "") + '</p></details>';
+      }).join("");
+      return '<article class="block reveal-block">' +
+        (block.content.title ? '<strong class="media-title">' + escapeHtml(block.content.title) + '</strong>' : '') +
+        '<div class="flip-card-grid">' + cards + '</div>' +
+        '</article>';
+    }
+
+    if (block.type === "accordion") {
+      var items = (block.content.items || []).map(function (item) {
+        return '<details class="accordion-item"><summary>' + escapeHtml(item.title || "") + '</summary><p>' + escapeHtml(item.text || "") + '</p></details>';
+      }).join("");
+      return '<article class="block accordion-block reveal-block">' +
+        (block.content.title ? '<strong class="media-title">' + escapeHtml(block.content.title) + '</strong>' : '') +
+        items +
+        '</article>';
+    }
+
+    if (block.type === "list") {
+      var tag = block.content.listStyle === "number" ? "ol" : "ul";
+      var itemsHtml = (block.content.items || []).map(function (item) { return '<li>' + escapeHtml(item) + '</li>'; }).join("");
+      return '<article class="block list-block reveal-block">' +
+        (block.content.title ? '<strong class="media-title">' + escapeHtml(block.content.title) + '</strong>' : '') +
+        '<' + tag + '>' + itemsHtml + '</' + tag + '>' +
         '</article>';
     }
 
@@ -390,8 +431,10 @@
   function renderContinue(block, screen, screens) {
     var lesson = currentLesson();
     var canContinue = requiredQuestionsComplete(lesson, screen);
-    return '<article class="block continue-panel reveal-block">' +
-      '<button class="continue-button" type="button" data-continue' + (canContinue ? "" : " disabled") + '>' + escapeHtml(block.content.label || "Continuar") + '</button>' +
+    var color = /^#[0-9a-fA-F]{6}$/.test(block.content.buttonColor || "") ? block.content.buttonColor : "#181833";
+    var size = ["small", "medium", "full"].indexOf(block.content.buttonSize) !== -1 ? block.content.buttonSize : "medium";
+    return '<article class="block continue-panel continue-panel-clean reveal-block">' +
+      '<button class="continue-button continue-' + size + '" style="background:' + escapeHtml(color) + '" type="button" data-continue' + (canContinue ? "" : " disabled") + '>' + escapeHtml(block.content.label || "Continuar") + '</button>' +
       '</article>';
   }
 
@@ -401,7 +444,7 @@
     }
 
     var canAdvance = requiredQuestionsComplete(currentLesson());
-    return '<article class="block continue-panel reveal-block">' +
+    return '<article class="block continue-panel continue-panel-clean reveal-block">' +
       '<button class="continue-button" type="button" data-next-unit' + (canAdvance ? "" : " disabled") + '>Ir a la siguiente unidad</button>' +
       '</article>';
   }
