@@ -1147,7 +1147,7 @@ label {
   border: 1px solid var(--soft-line);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
-  padding: 18px;
+  padding: 24px;
 }
 
 .preview-quiz strong {
@@ -1194,15 +1194,41 @@ label {
 .preview-quiz label,
 .quiz-option-preview {
   align-items: center;
-  background: #fff;
-  border: 1px solid var(--line);
+  background: #fbfbff;
+  border: 1px solid rgba(129, 130, 242, 0.22);
   border-radius: var(--radius-sm);
   color: var(--ink);
-  display: flex;
-  font-size: 14px;
-  gap: 10px;
+  display: grid;
+  font-size: 15px;
+  gap: 12px;
+  grid-template-columns: 18px minmax(0, 1fr);
+  justify-items: start;
   margin-top: 9px;
-  padding: 11px 12px;
+  padding: 14px 16px;
+}
+
+.preview-quiz label:hover,
+.quiz-option-preview:hover {
+  background: #f6f6ff;
+  border-color: rgba(129, 130, 242, 0.52);
+}
+
+.preview-quiz input[type="radio"],
+.preview-quiz input[type="checkbox"] {
+  accent-color: var(--violet);
+  height: 16px;
+  justify-self: center;
+  margin: 0;
+  width: 16px;
+}
+
+.preview-quiz label span,
+.quiz-option-preview span {
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.35;
+  text-align: left;
 }
 
 .preview-quiz input[type="text"],
@@ -1218,15 +1244,35 @@ label {
   width: 100%;
 }
 
+.preview-quiz .fill-answer {
+  margin-top: 14px;
+}
+
 .matching-row {
   align-items: center;
+  background: #fbfbff;
+  border: 1px solid rgba(129, 130, 242, 0.22);
+  border-radius: var(--radius-sm);
   display: grid !important;
-  gap: 12px;
-  grid-template-columns: minmax(0, 1fr) minmax(180px, 240px);
+  gap: 18px;
+  grid-template-columns: minmax(150px, 220px) minmax(260px, 360px);
+  max-width: 720px;
+  padding: 14px 16px;
 }
 
 .matching-row span {
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 720;
+  line-height: 1.35;
   min-width: 0;
+}
+
+.matching-row select {
+  margin-top: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .pair-row {
@@ -1240,6 +1286,12 @@ label {
   color: var(--violet);
   font-weight: 780;
   margin-top: 12px;
+}
+
+.preview-quiz button[data-preview-check],
+.preview-quiz button[data-check-quiz],
+.preview-quiz [data-preview-check] {
+  margin-top: 22px;
 }
 
 .preview-continue,
