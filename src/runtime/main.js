@@ -103,6 +103,13 @@
     return "aspect-ratio: " + escapeHtml(content.aspectRatio || "16 / 9");
   }
 
+  function customHtmlWidth(content) {
+    var stored = Number(content.htmlWidth);
+    if (!stored) return 400;
+    if (stored === 520 && content.enableTailwind !== false) return 400;
+    return Math.max(220, stored);
+  }
+
   window.addEventListener("message", function (event) {
     if (!event.data || event.data.type !== "pulsestudio-html-height") return;
     var frame = document.querySelector('[data-html-frame="' + String(event.data.id).replace(/"/g, "") + '"]');
@@ -363,7 +370,7 @@
       var frameId = "html-" + block.id;
       var fixed = block.content.htmlSizing === "fixed";
       var htmlHeight = Number(block.content.htmlHeight) || 420;
-      var htmlWidth = Math.max(220, Number(block.content.htmlWidth) || 520);
+      var htmlWidth = customHtmlWidth(block.content);
       var wrapStyle = block.content.htmlWidthMode === "full" ? "" : ' style="max-width:' + htmlWidth + 'px"';
       return '<article class="block ' + mediaClass(block.content) + ' reveal-block">' +
         (block.content.title ? '<strong class="media-title">' + escapeHtml(block.content.title) + '</strong>' : '') +
