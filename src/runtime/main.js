@@ -122,6 +122,28 @@
     return "center";
   }
 
+  function safeHexColor(value, fallback) {
+    return /^#[0-9a-fA-F]{6}$/.test(value || "") ? value : fallback;
+  }
+
+  function plainTextFromHtml(value) {
+    return String(value || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  }
+
+  function flipCardTextSize(content, card, side) {
+    var configured = Number(content[side === "front" ? "frontTextSize" : "backTextSize"]) || (side === "front" ? 22 : 15);
+    var text = plainTextFromHtml(card[side + "Html"] || card[side] || "");
+    if (side === "back" && text.length > 220) return Math.max(11, configured - 4);
+    if (side === "back" && text.length > 150) return Math.max(12, configured - 3);
+    if (text.length > 90) return Math.max(13, configured - 2);
+    return configured;
+  }
+
+  function flipCardColumnsClass(columns) {
+    var value = Math.min(3, Math.max(1, Number(columns) || 3));
+    return "flip-card-cols-" + value;
+  }
+
   window.addEventListener("message", function (event) {
     if (!event.data || event.data.type !== "pulsestudio-html-height") return;
     var frame = document.querySelector('[data-html-frame="' + String(event.data.id).replace(/"/g, "") + '"]');
@@ -338,12 +360,24 @@
     }
 
     if (block.type === "flip_cards") {
-      var cards = (block.content.cards || []).map(function (card) {
-        return '<details class="flip-card"><summary>' + escapeHtml(card.front || "") + '</summary><p>' + escapeHtml(card.back || "") + '</p></details>';
+      var height = Number(block.content.cardHeight) || 230;
+      var columns = block.content.columns || Math.min((block.content.cards || []).length, 3);
+      var cards = (block.content.cards || []).map(function (card, index) {
+        var frontColor = safeHexColor(card.frontColor, "#ffffff");
+        var backColor = safeHexColor(card.backColor, "#181833");
+        var frontTextColor = frontColor.toLowerCase() === "#ffffff" ? "#181833" : "#ffffff";
+        return '<button class="flip-card" type="button" data-flip-card style="min-height:' + escapeHtml(String(height)) + 'px">' +
+          '<span class="flip-card-inner">' +
+          '<span class="flip-card-face flip-card-front" style="background:' + escapeHtml(frontColor) + ';color:' + escapeHtml(frontTextColor) + '">' +
+          '<span class="rich-output" style="font-size:' + escapeHtml(String(flipCardTextSize(block.content, card, "front"))) + 'px">' + sanitizeRichHtml(card.frontHtml || escapeHtml(card.front || "")) + '</span><span class="flip-card-icon">↻</span></span>' +
+          '<span class="flip-card-face flip-card-back" style="background:' + escapeHtml(backColor) + '">' +
+          '<span class="rich-output" style="font-size:' + escapeHtml(String(flipCardTextSize(block.content, card, "back"))) + 'px">' + sanitizeRichHtml(card.backHtml || escapeHtml(card.back || "")) + '</span><span class="flip-card-icon">↻</span></span>' +
+          '</span>' +
+          '</button>';
       }).join("");
       return '<article class="block reveal-block">' +
         (block.content.title ? '<strong class="media-title">' + escapeHtml(block.content.title) + '</strong>' : '') +
-        '<div class="flip-card-grid">' + cards + '</div>' +
+        '<div class="flip-card-grid ' + flipCardColumnsClass(columns) + '">' + cards + '</div>' +
         '</article>';
     }
 
@@ -577,6 +611,12 @@
     });
 
     els.lesson.addEventListener("click", function (event) {
+      var flipCard = event.target.closest("[data-flip-card]");
+      if (flipCard) {
+        flipCard.classList.toggle("flipped");
+        return;
+      }
+
       var galleryButton = event.target.closest("[data-gallery-action]");
       if (galleryButton) {
         var gallery = galleryButton.closest(".image-gallery-stage");

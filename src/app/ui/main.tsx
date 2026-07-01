@@ -361,7 +361,7 @@ function defaultBlock(type: BlockType): CourseBlock {
   }
   if (type === "image_gallery") return { id: uid("b"), type, content: { title: "Imagen", images: [{ url: "assets/demo-learning.svg", alt: "Imagen" }], imageHeight: 360, hasFrame: true } };
   if (type === "statement") return { id: uid("b"), type, content: { text: "You're the master of your life. Steer it with intention.", textHtml: "You're the master of your life. Steer it with intention.", showDivider: true, width: "normal" } };
-  if (type === "flip_cards") return { id: uid("b"), type, content: { title: "Tarjetas interactivas", cards: [{ front: "Concepto", back: "Texto que aparece al hacer clic." }, { front: "Idea clave", back: "Otra explicacion breve." }] } };
+  if (type === "flip_cards") return { id: uid("b"), type, content: { title: "Tarjetas interactivas", columns: 3, cardHeight: 230, frontTextSize: 22, backTextSize: 15, cards: [{ front: "Concepto", frontHtml: "Concepto", back: "Texto que aparece al hacer clic.", backHtml: "Texto que aparece al hacer clic.", frontColor: "#ffffff", backColor: "#181833" }, { front: "Idea clave", frontHtml: "Idea clave", back: "Otra explicacion breve.", backHtml: "Otra explicacion breve.", frontColor: "#ffffff", backColor: "#3C3C59" }, { front: "Aplicacion", frontHtml: "Aplicacion", back: "Piensa como se ve esto en una situacion real.", backHtml: "Piensa como se ve esto en una situacion real.", frontColor: "#ffffff", backColor: "#8182F2" }] } };
   if (type === "accordion") return { id: uid("b"), type, content: { title: "Acordeon", items: [{ title: "Pregunta o tema", text: "Contenido desplegable." }, { title: "Otro tema", text: "Mas informacion." }] } };
   if (type === "list") return { id: uid("b"), type, content: { title: "Lista", listStyle: "bullet", items: ["Primer punto", "Segundo punto", "Tercer punto"] } };
   if (type === "embed") return { id: uid("b"), type, content: { title: "Video o recurso embebido", url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", caption: "", size: "wide", aspectRatio: "16 / 9", hasFrame: true } };
@@ -1013,7 +1013,7 @@ function BlockForm({ block, onChange }: { block: CourseBlock; onChange: (content
   if (block.type === "statement") return <RichTextarea label="Statement" value={rich(c, "text")} onChange={(html) => patch({ textHtml: html, text: htmlToText(html) })} rows={5} />;
   if (block.type === "image_text") return <div className="grid gap-4"><Field label="URL imagen" value={c.imageUrl || ""} onChange={(value) => patch({ imageUrl: value })} /><Field label="Tamano imagen px" type="number" value={String(c.imageSize || 180)} onChange={(value) => patch({ imageSize: Number(value) || 180 })} /><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} /><RichTextarea label="Texto" value={rich(c, "text")} onChange={(html) => patch({ textHtml: html, text: htmlToText(html) })} /></div>;
   if (block.type === "image_gallery") return <ImageGalleryForm content={c} onChange={patch} />;
-  if (block.type === "flip_cards") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} />{(c.cards || []).map((card: any, index: number) => <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2"><Field label={`Frente ${index + 1}`} value={card.front || ""} onChange={(value) => { const cards = [...(c.cards || [])]; cards[index] = { ...card, front: value }; patch({ cards }); }} /><Field label="Reverso" value={card.back || ""} onChange={(value) => { const cards = [...(c.cards || [])]; cards[index] = { ...card, back: value }; patch({ cards }); }} /><button className="mt-6 grid size-10 place-items-center rounded-md text-red-600 hover:bg-red-50" onClick={() => patch({ cards: (c.cards || []).filter((_: any, i: number) => i !== index) })}><Trash2 size={15} /></button></div>)}<button className="w-fit rounded-md bg-mist px-3 py-2 text-sm font-extrabold" onClick={() => patch({ cards: [...(c.cards || []), { front: "Nueva tarjeta", back: "Texto oculto" }] })}>Agregar tarjeta</button></div>;
+  if (block.type === "flip_cards") return <FlipCardsForm content={c} onChange={patch} />;
   if (block.type === "accordion") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} />{(c.items || []).map((item: any, index: number) => <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2"><Field label={`Item ${index + 1}`} value={item.title || ""} onChange={(value) => { const items = [...(c.items || [])]; items[index] = { ...item, title: value }; patch({ items }); }} /><Field label="Texto" value={item.text || ""} onChange={(value) => { const items = [...(c.items || [])]; items[index] = { ...item, text: value }; patch({ items }); }} /><button className="mt-6 grid size-10 place-items-center rounded-md text-red-600 hover:bg-red-50" onClick={() => patch({ items: (c.items || []).filter((_: any, i: number) => i !== index) })}><Trash2 size={15} /></button></div>)}<button className="w-fit rounded-md bg-mist px-3 py-2 text-sm font-extrabold" onClick={() => patch({ items: [...(c.items || []), { title: "Nuevo item", text: "Contenido" }] })}>Agregar item</button></div>;
   if (block.type === "list") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} /><SelectField label="Tipo" value={c.listStyle || "bullet"} onChange={(value) => patch({ listStyle: value })} options={[["bullet", "Puntos"], ["number", "1, 2, 3"]]} /><TextField label="Items, uno por linea" value={(c.items || []).join("\n")} onChange={(value) => patch({ items: linesToItems(value) })} rows={6} /></div>;
   if (block.type === "embed") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} /><Field label="URL" value={c.url || ""} onChange={(value) => patch({ url: value })} /><Field label="Bajada" value={c.caption || ""} onChange={(value) => patch({ caption: value })} /></div>;
@@ -1050,6 +1050,46 @@ function ImageGalleryForm({ content, onChange }: { content: Record<string, any>;
       </div>
       <Field label="Alto maximo en px" type="number" value={String(Number(content.imageHeight) || imageHeightPx(content))} onChange={(value) => onChange({ imageHeight: Number(value) || 360 })} />
       <SelectField label="Marco" value={content.hasFrame === false ? "no" : "yes"} onChange={(value) => onChange({ hasFrame: value === "yes" })} options={[["yes", "Con marco"], ["no", "Sin marco"]]} />
+    </div>
+  );
+}
+
+function FlipCardsForm({ content, onChange }: { content: Record<string, any>; onChange: (patch: Record<string, any>) => void }) {
+  const cards = content.cards?.length ? content.cards : [{ front: "Nueva tarjeta", frontHtml: "Nueva tarjeta", back: "Texto oculto", backHtml: "Texto oculto", frontColor: "#ffffff", backColor: "#181833" }];
+
+  function updateCard(index: number, patch: Record<string, any>) {
+    const next = cards.map((card: any, itemIndex: number) => itemIndex === index ? { ...card, ...patch } : card);
+    onChange({ cards: next });
+  }
+
+  return (
+    <div className="grid gap-5">
+      <Field label="Titulo" value={content.title || ""} onChange={(value) => onChange({ title: value })} />
+      <div className="grid gap-3 md:grid-cols-4">
+        <SelectField label="Columnas" value={String(content.columns || Math.min(cards.length, 3) || 1)} onChange={(value) => onChange({ columns: Number(value) || 1 })} options={[["1", "1 tarjeta"], ["2", "2 tarjetas"], ["3", "3 tarjetas"]]} />
+        <Field label="Alto tarjeta px" type="number" value={String(Number(content.cardHeight) || 230)} onChange={(value) => onChange({ cardHeight: Number(value) || 230 })} />
+        <Field label="Tamano frente px" type="number" value={String(Number(content.frontTextSize) || 22)} onChange={(value) => onChange({ frontTextSize: Number(value) || 22 })} />
+        <Field label="Tamano reverso px" type="number" value={String(Number(content.backTextSize) || 15)} onChange={(value) => onChange({ backTextSize: Number(value) || 15 })} />
+      </div>
+      {cards.map((card: any, index: number) => (
+        <section key={index} className="grid gap-4 rounded-lg border border-line bg-white p-4">
+          <div className="flex items-center justify-between gap-3">
+            <h4 className="text-sm font-black text-ink">Tarjeta {index + 1}</h4>
+            <button type="button" className="grid size-8 place-items-center rounded-md text-red-600 hover:bg-red-50" onClick={() => onChange({ cards: cards.filter((_: any, itemIndex: number) => itemIndex !== index) })}><Trash2 size={15} /></button>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-3">
+              <HexColorField label="Fondo frente" value={card.frontColor || "#ffffff"} onChange={(value) => updateCard(index, { frontColor: value })} />
+              <RichTextarea label="Texto frente" value={card.frontHtml || card.front || ""} onChange={(html) => updateCard(index, { frontHtml: html, front: htmlToText(html) })} rows={4} />
+            </div>
+            <div className="grid gap-3">
+              <HexColorField label="Fondo reverso" value={card.backColor || "#181833"} onChange={(value) => updateCard(index, { backColor: value })} />
+              <RichTextarea label="Texto reverso" value={card.backHtml || card.back || ""} onChange={(html) => updateCard(index, { backHtml: html, back: htmlToText(html) })} rows={4} />
+            </div>
+          </div>
+        </section>
+      ))}
+      <button type="button" className="w-fit rounded-md bg-mist px-3 py-2 text-sm font-extrabold" onClick={() => onChange({ cards: [...cards, { front: "Nueva tarjeta", frontHtml: "Nueva tarjeta", back: "Texto oculto", backHtml: "Texto oculto", frontColor: "#ffffff", backColor: "#181833" }] })}>Agregar tarjeta</button>
     </div>
   );
 }
@@ -1146,8 +1186,57 @@ function ImageGalleryPreview({ content }: { content: Record<string, any> }) {
   );
 }
 
+function flipCardTextSize(content: Record<string, any>, card: Record<string, any>, side: "front" | "back") {
+  const configured = Number(content[side === "front" ? "frontTextSize" : "backTextSize"]) || (side === "front" ? 22 : 15);
+  const text = htmlToText(card[`${side}Html`] || card[side] || "");
+  if (side === "back" && text.length > 220) return Math.max(11, configured - 4);
+  if (side === "back" && text.length > 150) return Math.max(12, configured - 3);
+  if (text.length > 90) return Math.max(13, configured - 2);
+  return configured;
+}
+
+function flipCardGridClass(columns: number) {
+  if (columns === 1) return "md:grid-cols-1";
+  if (columns === 2) return "md:grid-cols-2";
+  return "md:grid-cols-3";
+}
+
+function safeCardColor(value: string, fallback: string) {
+  return /^#[0-9a-fA-F]{6}$/.test(value || "") ? value : fallback;
+}
+
 function FlipCardsPreview({ content }: { content: Record<string, any> }) {
-  return <div className="grid gap-3">{content.title ? <strong className="text-sm">{content.title}</strong> : null}<div className="grid gap-3 md:grid-cols-2">{(content.cards || []).map((card: any, index: number) => <details key={index} className="group rounded-md border border-line bg-white p-4 shadow-sm"><summary className="cursor-pointer list-none text-sm font-black text-ink">{card.front}</summary><p className="mt-3 text-sm leading-6 text-plum">{card.back}</p></details>)}</div></div>;
+  const cards = content.cards || [];
+  const [flipped, setFlipped] = useState<Record<number, boolean>>({});
+  const columns = Math.min(3, Math.max(1, Number(content.columns) || Math.min(cards.length, 3) || 1));
+  const height = Number(content.cardHeight) || 230;
+
+  return (
+    <div className="grid gap-3">
+      {content.title ? <strong className="text-sm">{content.title}</strong> : null}
+      <div className={`grid gap-3 ${flipCardGridClass(columns)}`}>
+        {cards.map((card: any, index: number) => {
+          const frontColor = safeCardColor(card.frontColor, "#ffffff");
+          const backColor = safeCardColor(card.backColor, "#181833");
+          const frontTextColor = frontColor.toLowerCase() === "#ffffff" ? "#181833" : "#ffffff";
+          return (
+            <button key={index} type="button" onClick={() => setFlipped((current) => ({ ...current, [index]: !current[index] }))} className="group perspective-[1200px] text-left" style={{ minHeight: `${height}px` }}>
+              <div className={`relative h-full min-h-[inherit] transition-transform duration-500 [transform-style:preserve-3d] ${flipped[index] ? "[transform:rotateY(180deg)]" : ""}`}>
+                <div className="absolute inset-0 grid place-items-center rounded-md border border-line p-5 text-center shadow-sm [backface-visibility:hidden]" style={{ background: frontColor, color: frontTextColor }}>
+                  <div className="rich-output leading-tight" style={{ fontSize: `${flipCardTextSize(content, card, "front")}px` }} dangerouslySetInnerHTML={{ __html: card.frontHtml || card.front || "" }} />
+                  <span className="absolute bottom-3 right-3 text-xs opacity-60">↻</span>
+                </div>
+                <div className="absolute inset-0 grid place-items-center overflow-hidden rounded-md border border-line p-5 text-center text-white shadow-sm [backface-visibility:hidden] [transform:rotateY(180deg)]" style={{ background: backColor }}>
+                  <div className="rich-output max-h-full overflow-hidden leading-snug" style={{ fontSize: `${flipCardTextSize(content, card, "back")}px` }} dangerouslySetInnerHTML={{ __html: card.backHtml || card.back || "" }} />
+                  <span className="absolute bottom-3 right-3 text-xs opacity-60">↻</span>
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 function AccordionPreview({ content }: { content: Record<string, any> }) {
