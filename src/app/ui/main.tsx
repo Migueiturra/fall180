@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as Tooltip from "@radix-ui/react-tooltip";
@@ -230,6 +230,35 @@ function blockWidthClass(content: Record<string, any>) {
   if (value === "s") return "md:max-w-2xl";
   if (value === "l") return "md:max-w-none";
   return "md:max-w-4xl";
+}
+
+function blockScreenMap(lesson: Lesson) {
+  let screen = 0;
+  return lesson.blocks.map((block) => {
+    const current = screen;
+    if (block.type === "continue_button") screen += 1;
+    return current;
+  });
+}
+
+function screenCount(lesson: Lesson) {
+  return lesson.blocks.filter((block) => block.type === "continue_button").length + 1;
+}
+
+function isQuestionType(type: BlockType) {
+  return ["quiz_single_choice", "quiz_multiple_response", "quiz_fill_blank", "quiz_matching"].includes(type);
+}
+
+function progressForLesson(lesson: Lesson, revealedScreen: number, correctQuestions: Record<string, boolean>) {
+  const map = blockScreenMap(lesson);
+  const scored = lesson.blocks.filter((block) => block.type !== "continue_button");
+  if (!scored.length) return 100;
+  const done = scored.filter((block) => {
+    const index = lesson.blocks.findIndex((item) => item.id === block.id);
+    if (map[index] > revealedScreen) return false;
+    return isQuestionType(block.type) ? correctQuestions[block.id] === true : true;
+  }).length;
+  return Math.round((done / scored.length) * 100);
 }
 
 function defaultBlock(type: BlockType): CourseBlock {
@@ -682,13 +711,51 @@ function BlockContentFrame({ block, children }: { block: CourseBlock; children: 
 }
 
 function RichTextarea({ label, value, onChange, rows = 4 }: { label: string; value: string; onChange: (html: string) => void; rows?: number }) {
+  const editorRef = useRef<HTMLDivElement | null>(null);
+  const [size, setSize] = useState("16px");
+
+  useEffect(() => {
+    if (editorRef.current && editorRef.current.innerHTML !== value) editorRef.current.innerHTML = value || "";
+  }, [value]);
+
+  function sync() {
+    onChange(editorRef.current?.innerHTML || "");
+  }
+
+  function command(name: string, commandValue?: string) {
+    editorRef.current?.focus();
+    document.execCommand(name, false, commandValue);
+    sync();
+  }
+
+  function applySize(nextSize: string) {
+    setSize(nextSize);
+    command("fontSize", "7");
+    editorRef.current?.querySelectorAll("font[size='7']").forEach((node) => {
+      const span = document.createElement("span");
+      span.style.fontSize = nextSize;
+      span.innerHTML = node.innerHTML;
+      node.replaceWith(span);
+    });
+    sync();
+  }
+
   return (
     <div className="grid gap-2">
       <span className="text-xs font-extrabold text-steel">{label}</span>
-      <div className="flex gap-1">
-        {colors.map((color) => <button key={color} type="button" onClick={() => onChange(`<span style="color:${color}">${htmlToText(value)}</span>`)} className="size-7 rounded-full border border-line" style={{ background: color }} />)}
+      <div className="flex flex-wrap items-center gap-1">
+        <button type="button" onClick={() => command("bold")} className="grid size-7 place-items-center rounded-md bg-mist text-sm font-black">B</button>
+        <button type="button" onClick={() => command("italic")} className="grid size-7 place-items-center rounded-md bg-mist text-sm font-black italic">I</button>
+        <button type="button" onClick={() => command("underline")} className="grid size-7 place-items-center rounded-md bg-mist text-sm font-black underline">U</button>
+        <select value={size} onChange={(event) => applySize(event.target.value)} className="h-7 rounded-md border border-line px-2 text-xs font-extrabold">
+          <option value="14px">S</option>
+          <option value="16px">M</option>
+          <option value="20px">L</option>
+          <option value="28px">XL</option>
+        </select>
+        {colors.map((color) => <button key={color} type="button" onClick={() => command("foreColor", color)} className="size-7 rounded-full border border-line" style={{ background: color }} />)}
       </div>
-      <textarea rows={rows} value={htmlToText(value)} onChange={(event) => onChange(event.target.value)} className="rounded-md border border-line p-3 text-sm font-semibold text-ink outline-none focus:border-violet" />
+      <div ref={editorRef} contentEditable suppressContentEditableWarning onInput={sync} className="min-h-28 rounded-md border border-line bg-white p-3 text-sm font-semibold leading-7 text-ink outline-none focus:border-violet" style={{ minHeight: `${Math.max(rows, 3) * 34}px` }} />
     </div>
   );
 }
@@ -731,7 +798,7 @@ function QuizForm({ block, onChange }: { block: CourseBlock; onChange: (content:
   }} options={[["no", "No"], ["yes", "Si"]]} /><button className="mt-6 grid size-10 place-items-center rounded-md text-red-600 hover:bg-red-50" onClick={() => patch({ options: options.filter((_: string, i: number) => i !== index) })}><Trash2 size={15} /></button></div>)}<button className="w-fit rounded-md bg-mist px-3 py-2 text-sm font-extrabold" onClick={() => patch({ options: [...options, "Nueva alternativa"] })}>Agregar alternativa</button></div>;
 }
 
-function BlockPreview({ block }: { block: CourseBlock }) {
+function BlockPreview({ block, onQuizStatusChange }: { block: CourseBlock; onQuizStatusChange?: (blockId: string, correct: boolean) => void }) {
   const c = block.content;
   if (block.type === "heading") return <h3 className="text-2xl font-black tracking-[-0.03em]" dangerouslySetInnerHTML={{ __html: rich(c, "text") }} />;
   if (block.type === "paragraph") return <div className="rich-output text-sm leading-7 text-plum" dangerouslySetInnerHTML={{ __html: rich(c, "text") }} />;
@@ -741,10 +808,10 @@ function BlockPreview({ block }: { block: CourseBlock }) {
   if (block.type === "custom_html") return <iframe className="min-h-48 w-full rounded-md border border-line" sandbox="allow-scripts allow-forms allow-popups" srcDoc={c.html || ""} />;
   if (block.type === "divider") return <hr className="border-line" />;
   if (block.type === "continue_button") return <div className="rounded-md border border-dashed border-violet/40 bg-mist p-4 text-center"><button className="rounded-md bg-ink px-4 py-2 text-sm font-extrabold text-white">{c.label || "Continuar"}</button></div>;
-  return <QuizPreview block={block} />;
+  return <QuizPreview block={block} onStatusChange={onQuizStatusChange} />;
 }
 
-function QuizPreview({ block }: { block: CourseBlock }) {
+function QuizPreview({ block, onStatusChange }: { block: CourseBlock; onStatusChange?: (blockId: string, correct: boolean) => void }) {
   const c = block.content;
   const [singleAnswer, setSingleAnswer] = useState<number | null>(null);
   const [multipleAnswers, setMultipleAnswers] = useState<number[]>([]);
@@ -769,23 +836,31 @@ function QuizPreview({ block }: { block: CourseBlock }) {
   }
 
   function review() {
+    let correct = false;
     if (block.type === "quiz_single_choice") {
-      setFeedback(singleAnswer === c.correctAnswer ? c.feedbackCorrect || "Correcto." : c.feedbackIncorrect || "Revisa la respuesta.");
+      correct = singleAnswer === c.correctAnswer;
+      setFeedback(correct ? c.feedbackCorrect || "Correcto." : c.feedbackIncorrect || "Revisa la respuesta.");
+      onStatusChange?.(block.id, correct);
       return;
     }
     if (block.type === "quiz_multiple_response") {
-      setFeedback(sameNumbers(multipleAnswers, c.correctAnswers || []) ? c.feedbackCorrect || "Correcto." : c.feedbackIncorrect || "Revisa las alternativas.");
+      correct = sameNumbers(multipleAnswers, c.correctAnswers || []);
+      setFeedback(correct ? c.feedbackCorrect || "Correcto." : c.feedbackIncorrect || "Revisa las alternativas.");
+      onStatusChange?.(block.id, correct);
       return;
     }
     if (block.type === "quiz_fill_blank") {
       const expected = (c.answers || []).map((answer: string) => c.caseSensitive ? answer.trim() : answer.trim().toLowerCase());
       const given = c.caseSensitive ? blankAnswer.trim() : blankAnswer.trim().toLowerCase();
-      setFeedback(expected.includes(given) ? c.feedbackCorrect || "Correcto." : c.feedbackIncorrect || "Revisa la respuesta.");
+      correct = expected.includes(given);
+      setFeedback(correct ? c.feedbackCorrect || "Correcto." : c.feedbackIncorrect || "Revisa la respuesta.");
+      onStatusChange?.(block.id, correct);
       return;
     }
     if (block.type === "quiz_matching") {
-      const correct = pairs.every((pair: any, index: number) => matchingAnswers[index] === pair.match);
+      correct = pairs.every((pair: any, index: number) => matchingAnswers[index] === pair.match);
       setFeedback(correct ? c.feedbackCorrect || "Correcto." : c.feedbackIncorrect || "Revisa las coincidencias.");
+      onStatusChange?.(block.id, correct);
     }
   }
 
@@ -814,20 +889,73 @@ function QuizActions({ feedback, onReview }: { feedback: string; onReview: () =>
 function PreviewApp() {
   const [course, setCourse] = useState<Course | null>(null);
   const [lessonIndex, setLessonIndex] = useState(0);
+  const [revealedScreens, setRevealedScreens] = useState<Record<string, number>>({});
+  const [correctQuestions, setCorrectQuestions] = useState<Record<string, boolean>>({});
   useEffect(() => {
     loadCourseById(getCourseId()).then(setCourse);
   }, []);
   if (!course) return <div className="grid min-h-screen place-items-center text-sm font-bold text-steel">Cargando vista previa...</div>;
   const lesson = course.lessons[lessonIndex] || course.lessons[0];
+  const map = blockScreenMap(lesson);
+  const revealedScreen = Math.min(revealedScreens[lesson.id] || 0, screenCount(lesson) - 1);
+  const unitProgress = progressForLesson(lesson, revealedScreen, correctQuestions);
+  const totalProgress = Math.round(course.lessons.reduce((sum, item, index) => {
+    if (index < lessonIndex) return sum + 100;
+    if (index > lessonIndex) return sum;
+    return sum + unitProgress;
+  }, 0) / Math.max(course.lessons.length, 1));
+
+  function canContinue(screen: number) {
+    return lesson.blocks.every((block, index) => {
+      if (!isQuestionType(block.type) || block.content.required === false || map[index] !== screen) return true;
+      return correctQuestions[block.id] === true;
+    });
+  }
+
+  function canFinishLesson() {
+    return lesson.blocks.every((block) => !isQuestionType(block.type) || block.content.required === false || correctQuestions[block.id] === true);
+  }
+
+  function revealNext() {
+    setRevealedScreens((current) => ({ ...current, [lesson.id]: Math.min(revealedScreen + 1, screenCount(lesson) - 1) }));
+    window.setTimeout(() => window.scrollBy({ top: 220, behavior: "smooth" }), 40);
+  }
+
   return (
     <div className="grid min-h-screen grid-cols-[260px_1fr] bg-white">
       <aside className="sticky top-0 h-screen overflow-y-auto border-r border-line bg-white">
-        <div className="bg-gradient-to-br from-plum to-ink p-6 text-white"><p className="text-[11px] font-black uppercase tracking-[0.12em]">Course preview</p><h1 className="mt-5 text-2xl font-black">{course.title}</h1><p className="mt-6 text-xs font-black">50% COMPLETE</p><div className="mt-3 h-1 bg-white/35"><i className="block h-full w-1/2 bg-white" /></div></div>
+        <div className="bg-gradient-to-br from-plum to-ink p-6 text-white"><p className="text-[11px] font-black uppercase tracking-[0.12em]">Course preview</p><h1 className="mt-5 text-2xl font-black">{course.title}</h1><p className="mt-6 text-xs font-black">CURSO {totalProgress}%</p><div className="mt-3 h-1 bg-white/35"><i className="block h-full bg-white" style={{ width: `${totalProgress}%` }} /></div><p className="mt-5 text-xs font-black">UNIDAD {unitProgress}%</p><div className="mt-3 h-1 bg-white/35"><i className="block h-full bg-violet" style={{ width: `${unitProgress}%` }} /></div></div>
         <nav className="grid gap-1.5 p-4">{course.lessons.map((item, index) => <button key={item.id} onClick={() => setLessonIndex(index)} className={`grid grid-cols-[24px_1fr_auto] items-center gap-2 rounded-md px-2.5 py-2 text-left ${index === lessonIndex ? "bg-mist" : ""}`}><span className="grid size-5 place-items-center rounded-full border border-line text-xs font-bold">{index + 1}</span><strong className="truncate text-sm">{item.title}</strong><small className="text-[11px] font-bold text-steel">{index <= lessonIndex ? "Disponible" : "Bloqueada"}</small></button>)}</nav>
       </aside>
-      <main className="p-8"><a className="mb-7 inline-flex rounded-md border border-line px-4 py-2 text-sm font-extrabold" href={`${appRoute("/")}?course=${course.id}`}>Volver al editor</a><section className="mx-auto max-w-5xl"><p className="text-xs font-black uppercase tracking-[0.12em] text-violet">Unidad {lessonIndex + 1} de {course.lessons.length}</p><h2 className="mb-7 text-4xl font-black tracking-[-0.04em]">{lesson.title}</h2><div className="grid gap-6">{lesson.blocks.map((block) => <div className="fade-up" key={block.id}><BlockContentFrame block={block}><BlockPreview block={block} /></BlockContentFrame></div>)}</div>{lessonIndex < course.lessons.length - 1 ? <div className="mt-8 rounded-lg border border-dashed border-violet/40 bg-mist p-6 text-center"><button onClick={() => setLessonIndex(lessonIndex + 1)} className="rounded-md bg-ink px-5 py-3 font-extrabold text-white">Ir a la siguiente unidad</button></div> : null}</section></main>
+      <main className="p-8"><a className="mb-7 inline-flex rounded-md border border-line px-4 py-2 text-sm font-extrabold" href={`${appRoute("/")}?course=${course.id}`}>Volver al editor</a><section className="mx-auto max-w-5xl"><p className="text-xs font-black uppercase tracking-[0.12em] text-violet">Unidad {lessonIndex + 1} de {course.lessons.length}</p><h2 className="mb-7 text-4xl font-black tracking-[-0.04em]">{lesson.title}</h2><div className="grid gap-6">{lesson.blocks.map((block, index) => {
+        if (map[index] > revealedScreen) return null;
+        if (block.type === "continue_button") {
+          if (map[index] !== revealedScreen || revealedScreen >= screenCount(lesson) - 1) return null;
+          const enabled = canContinue(map[index]);
+          return <FadeInOnView key={block.id}><BlockContentFrame block={block}><div className="rounded-md border border-dashed border-violet/40 bg-mist p-4 text-center"><button disabled={!enabled} onClick={revealNext} className="rounded-md bg-ink px-4 py-2 text-sm font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-50">{block.content.label || "Continuar"}</button></div></BlockContentFrame></FadeInOnView>;
+        }
+        return <FadeInOnView key={block.id}><BlockContentFrame block={block}><BlockPreview block={block} onQuizStatusChange={(id, correct) => setCorrectQuestions((current) => ({ ...current, [id]: correct }))} /></BlockContentFrame></FadeInOnView>;
+      })}</div>{revealedScreen >= screenCount(lesson) - 1 && lessonIndex < course.lessons.length - 1 ? <div className="mt-8 rounded-lg border border-dashed border-violet/40 bg-mist p-6 text-center"><button disabled={!canFinishLesson()} onClick={() => canFinishLesson() && setLessonIndex(lessonIndex + 1)} className="rounded-md bg-ink px-5 py-3 font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-50">Ir a la siguiente unidad</button></div> : null}</section></main>
     </div>
   );
+}
+
+function FadeInOnView({ children }: { children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setVisible(true);
+        observer.disconnect();
+      }
+    }, { threshold: 0.15 });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+  return <div ref={ref} className={visible ? "fade-up" : "fade-pending"}>{children}</div>;
 }
 
 function resolveAsset(url = "") {

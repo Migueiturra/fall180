@@ -52,6 +52,11 @@ button {
   animation: fadeUp 320ms ease both;
 }
 
+.fade-pending {
+  opacity: 0;
+  transform: translateY(14px);
+}
+
 @keyframes fadeUp {
   from {
     opacity: 0;
