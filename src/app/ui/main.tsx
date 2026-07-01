@@ -972,7 +972,7 @@ function BlockForm({ block, onChange }: { block: CourseBlock; onChange: (content
   if (block.type === "accordion") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} />{(c.items || []).map((item: any, index: number) => <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2"><Field label={`Item ${index + 1}`} value={item.title || ""} onChange={(value) => { const items = [...(c.items || [])]; items[index] = { ...item, title: value }; patch({ items }); }} /><Field label="Texto" value={item.text || ""} onChange={(value) => { const items = [...(c.items || [])]; items[index] = { ...item, text: value }; patch({ items }); }} /><button className="mt-6 grid size-10 place-items-center rounded-md text-red-600 hover:bg-red-50" onClick={() => patch({ items: (c.items || []).filter((_: any, i: number) => i !== index) })}><Trash2 size={15} /></button></div>)}<button className="w-fit rounded-md bg-mist px-3 py-2 text-sm font-extrabold" onClick={() => patch({ items: [...(c.items || []), { title: "Nuevo item", text: "Contenido" }] })}>Agregar item</button></div>;
   if (block.type === "list") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} /><SelectField label="Tipo" value={c.listStyle || "bullet"} onChange={(value) => patch({ listStyle: value })} options={[["bullet", "Puntos"], ["number", "1, 2, 3"]]} /><TextField label="Items, uno por linea" value={(c.items || []).join("\n")} onChange={(value) => patch({ items: linesToItems(value) })} rows={6} /></div>;
   if (block.type === "embed") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} /><Field label="URL" value={c.url || ""} onChange={(value) => patch({ url: value })} /><Field label="Bajada" value={c.caption || ""} onChange={(value) => patch({ caption: value })} /></div>;
-  if (block.type === "custom_html") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} /><TextField label="Codigo HTML" value={c.html || ""} onChange={(value) => patch({ html: value })} rows={9} /><SelectField label="Ancho" value={c.htmlWidthMode || "fixed"} onChange={(value) => patch({ htmlWidthMode: value })} options={[["fixed", "Fijo en px"], ["full", "Todo el bloque"]]} /><Field label="Ancho iframe px" type="number" value={String(Number(c.htmlWidth) || 520)} onChange={(value) => patch({ htmlWidth: Number(value) || 520 })} /><SelectField label="Alto" value={c.htmlSizing || "auto"} onChange={(value) => patch({ htmlSizing: value })} options={[["auto", "Segun contenido"], ["fixed", "Fijo en px"]]} /><Field label="Alto fijo px" type="number" value={String(Number(c.htmlHeight) || 420)} onChange={(value) => patch({ htmlHeight: Number(value) || 420 })} /><SelectField label="Marco" value={c.hasFrame === false ? "no" : "yes"} onChange={(value) => patch({ hasFrame: value === "yes" })} options={[["yes", "Con marco"], ["no", "Sin marco"]]} /><SelectField label="Tailwind / HyperUI" value={c.enableTailwind === false ? "no" : "yes"} onChange={(value) => patch({ enableTailwind: value === "yes" })} options={[["yes", "Activado"], ["no", "Desactivado"]]} /></div>;
+  if (block.type === "custom_html") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} /><TextField label="Codigo HTML" value={c.html || ""} onChange={(value) => patch({ html: value })} rows={9} /><SelectField label="Ancho" value={c.htmlWidthMode || "fixed"} onChange={(value) => patch({ htmlWidthMode: value })} options={[["fixed", "Fijo en px"], ["full", "Todo el bloque"]]} /><Field label="Ancho iframe px" type="number" value={String(Number(c.htmlWidth) || 520)} onChange={(value) => patch({ htmlWidth: Number(value) || 520 })} /><SelectField label="Alto" value={c.htmlSizing || "auto"} onChange={(value) => patch({ htmlSizing: value })} options={[["auto", "Segun contenido"], ["fixed", "Fijo en px"]]} /><Field label="Alto/minimo px" type="number" value={String(Number(c.htmlHeight) || 420)} onChange={(value) => patch({ htmlHeight: Number(value) || 420 })} /><SelectField label="Marco" value={c.hasFrame === false ? "no" : "yes"} onChange={(value) => patch({ hasFrame: value === "yes" })} options={[["yes", "Con marco"], ["no", "Sin marco"]]} /><SelectField label="Tailwind / HyperUI" value={c.enableTailwind === false ? "no" : "yes"} onChange={(value) => patch({ enableTailwind: value === "yes" })} options={[["yes", "Activado"], ["no", "Desactivado"]]} /></div>;
   if (block.type === "continue_button") return <div className="grid gap-4"><Field label="Texto del boton" value={c.label || "Continuar"} onChange={(value) => patch({ label: value })} /><SelectField label="Tamano boton" value={c.buttonSize || "medium"} onChange={(value) => patch({ buttonSize: value })} options={[["small", "Pequeno"], ["medium", "Mediano"], ["full", "Grande / ancho completo"]]} /><HexColorField label="Color" value={c.buttonColor || "#181833"} onChange={(value) => patch({ buttonColor: value })} /></div>;
   if (block.type === "divider") return <p className="text-sm font-bold text-steel">Este bloque no necesita configuracion.</p>;
   return <QuizForm block={block} onChange={onChange} />;
@@ -1103,14 +1103,15 @@ function customHtmlSrcDoc(content: Record<string, any>, frameId: string) {
 ${content.html || ""}
 <script>
   const measureHeight = () => {
-    const children = [...document.body.children].filter((element) => element.tagName !== "SCRIPT");
+    const children = [...document.body.querySelectorAll("*")].filter((element) => !["SCRIPT","STYLE"].includes(element.tagName));
     if (!children.length) return 120;
     const bodyTop = document.body.getBoundingClientRect().top;
     return Math.ceil(children.reduce((height, element) => {
       const rect = element.getBoundingClientRect();
       const styles = window.getComputedStyle(element);
+      if (!rect.width && !rect.height) return height;
       return Math.max(height, rect.bottom - bodyTop + parseFloat(styles.marginBottom || "0"));
-    }, 0));
+    }, document.body.scrollHeight) + 2);
   };
   const sendHeight = () => parent.postMessage({ type: "pulsestudio-html-height", id: "${frameId}", height: measureHeight() }, "*");
   window.addEventListener("load", sendHeight);
@@ -1144,7 +1145,7 @@ function CustomHtmlFrame({ content }: { content: Record<string, any> }) {
     }
     function onMessage(event: MessageEvent) {
       if (event.data?.type !== "pulsestudio-html-height" || event.data.id !== frameId) return;
-      setHeight(Math.max(120, Math.min(Number(event.data.height) || 420, 2400)));
+      setHeight(Math.max(Number(content.htmlHeight) || 120, Math.min(Number(event.data.height) || 420, 2400)));
     }
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);

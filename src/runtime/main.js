@@ -107,7 +107,7 @@
     if (!event.data || event.data.type !== "pulsestudio-html-height") return;
     var frame = document.querySelector('[data-html-frame="' + String(event.data.id).replace(/"/g, "") + '"]');
     if (!frame || frame.dataset.sizing === "fixed") return;
-    frame.style.height = Math.max(120, Math.min(Number(event.data.height) || 420, 2400)) + "px";
+    frame.style.height = Math.max(Number(frame.dataset.minHeight) || 120, Math.min(Number(event.data.height) || 420, 2400)) + "px";
   });
 
   function customHtmlSrcDoc(content, frameId) {
@@ -116,7 +116,7 @@
       tailwind +
       '<style>html,body{margin:0;min-height:0;background:transparent;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}body{display:flow-root;overflow:hidden}*,*::before,*::after{box-sizing:border-box}</style>' +
       '</head><body>' + (content.html || "") +
-      '<script>const measureHeight=()=>{const children=[...document.body.children].filter((element)=>element.tagName!=="SCRIPT");if(!children.length)return 120;const bodyTop=document.body.getBoundingClientRect().top;return Math.ceil(children.reduce((height,element)=>{const rect=element.getBoundingClientRect();const styles=window.getComputedStyle(element);return Math.max(height,rect.bottom-bodyTop+parseFloat(styles.marginBottom||"0"));},0));};const sendHeight=()=>parent.postMessage({type:"pulsestudio-html-height",id:"' + escapeHtml(frameId) + '",height:measureHeight()},"*");window.addEventListener("load",sendHeight);document.querySelectorAll("img").forEach((image)=>image.addEventListener("load",sendHeight));new ResizeObserver(sendHeight).observe(document.body);new ResizeObserver(sendHeight).observe(document.documentElement);document.addEventListener("click",(event)=>{const link=event.target.closest&&event.target.closest("a");if(!link)return;const href=link.getAttribute("href")||"";if(href==="#"||href.startsWith("#"))event.preventDefault();});setTimeout(sendHeight,200);setTimeout(sendHeight,800);<\\/script>' +
+      '<script>const measureHeight=()=>{const children=[...document.body.querySelectorAll("*")].filter((element)=>![\"SCRIPT\",\"STYLE\"].includes(element.tagName));if(!children.length)return 120;const bodyTop=document.body.getBoundingClientRect().top;return Math.ceil(children.reduce((height,element)=>{const rect=element.getBoundingClientRect();const styles=window.getComputedStyle(element);if(!rect.width&&!rect.height)return height;return Math.max(height,rect.bottom-bodyTop+parseFloat(styles.marginBottom||"0"));},document.body.scrollHeight)+2);};const sendHeight=()=>parent.postMessage({type:"pulsestudio-html-height",id:"' + escapeHtml(frameId) + '",height:measureHeight()},"*");window.addEventListener("load",sendHeight);document.querySelectorAll("img").forEach((image)=>image.addEventListener("load",sendHeight));new ResizeObserver(sendHeight).observe(document.body);new ResizeObserver(sendHeight).observe(document.documentElement);document.addEventListener("click",(event)=>{const link=event.target.closest&&event.target.closest("a");if(!link)return;const href=link.getAttribute("href")||"";if(href==="#"||href.startsWith("#"))event.preventDefault();});setTimeout(sendHeight,200);setTimeout(sendHeight,800);<\\/script>' +
       '</body></html>';
   }
 
@@ -367,7 +367,7 @@
       var wrapStyle = block.content.htmlWidthMode === "full" ? "" : ' style="max-width:' + htmlWidth + 'px"';
       return '<article class="block ' + mediaClass(block.content) + ' reveal-block">' +
         (block.content.title ? '<strong class="media-title">' + escapeHtml(block.content.title) + '</strong>' : '') +
-        '<div class="custom-html-wrap"' + wrapStyle + '><iframe class="custom-html-frame" title="' + escapeHtml(block.content.title || "HTML custom") + '" sandbox="allow-scripts allow-forms allow-popups" data-html-frame="' + escapeHtml(frameId) + '" data-sizing="' + (fixed ? "fixed" : "auto") + '" srcdoc="' + escapeHtml(customHtmlSrcDoc(block.content, frameId)) + '" style="height:' + htmlHeight + 'px"></iframe></div>' +
+        '<div class="custom-html-wrap"' + wrapStyle + '><iframe class="custom-html-frame" title="' + escapeHtml(block.content.title || "HTML custom") + '" sandbox="allow-scripts allow-forms allow-popups" data-html-frame="' + escapeHtml(frameId) + '" data-sizing="' + (fixed ? "fixed" : "auto") + '" data-min-height="' + htmlHeight + '" srcdoc="' + escapeHtml(customHtmlSrcDoc(block.content, frameId)) + '" style="height:' + htmlHeight + 'px"></iframe></div>' +
         '</article>';
     }
 
