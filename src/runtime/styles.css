@@ -448,6 +448,12 @@ h1 {
   font-weight: 780;
 }
 
+.custom-html-wrap {
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+}
+
 .media-shell,
 .custom-html-frame {
   background: #fff;

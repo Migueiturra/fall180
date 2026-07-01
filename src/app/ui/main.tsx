@@ -364,7 +364,7 @@ function defaultBlock(type: BlockType): CourseBlock {
   if (type === "accordion") return { id: uid("b"), type, content: { title: "Acordeon", items: [{ title: "Pregunta o tema", text: "Contenido desplegable." }, { title: "Otro tema", text: "Mas informacion." }] } };
   if (type === "list") return { id: uid("b"), type, content: { title: "Lista", listStyle: "bullet", items: ["Primer punto", "Segundo punto", "Tercer punto"] } };
   if (type === "embed") return { id: uid("b"), type, content: { title: "Video o recurso embebido", url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", caption: "", size: "wide", aspectRatio: "16 / 9", hasFrame: true } };
-  if (type === "custom_html") return { id: uid("b"), type, content: { title: "Contenido HTML custom", html: "<div class='p-6 text-center'><h2 class='text-2xl font-bold'>Bloque HTML</h2><p class='mt-2'>Escribe tu codigo.</p></div>", size: "wide", aspectRatio: "16 / 9", hasFrame: true, htmlSizing: "auto", htmlHeight: 420, enableTailwind: true } };
+  if (type === "custom_html") return { id: uid("b"), type, content: { title: "Contenido HTML custom", html: "<div class='p-6 text-center'><h2 class='text-2xl font-bold'>Bloque HTML</h2><p class='mt-2'>Escribe tu codigo.</p></div>", size: "wide", aspectRatio: "16 / 9", hasFrame: true, htmlSizing: "auto", htmlHeight: 420, htmlWidthMode: "fixed", htmlWidth: 520, enableTailwind: true } };
   if (type === "quiz_single_choice") return { id: uid("b"), type, content: { question: "Escribe la pregunta", options: ["Alternativa correcta", "Alternativa incorrecta"], correctAnswer: 0, required: true, feedbackCorrect: "Correcto.", feedbackIncorrect: "Revisa la respuesta." } };
   if (type === "quiz_multiple_response") return { id: uid("b"), type, content: { question: "Selecciona todas las alternativas correctas", options: ["Respuesta correcta", "Otra respuesta correcta", "Distractor"], correctAnswers: [0, 1], required: true, feedbackCorrect: "Correcto.", feedbackIncorrect: "Revisa las alternativas." } };
   if (type === "quiz_fill_blank") return { id: uid("b"), type, content: { question: "Completa la frase", prompt: "La pieza que reconoce el LMS es el archivo ____.", answers: ["imsmanifest.xml"], caseSensitive: false, required: true, feedbackCorrect: "Correcto.", feedbackIncorrect: "Revisa la respuesta." } };
@@ -972,7 +972,7 @@ function BlockForm({ block, onChange }: { block: CourseBlock; onChange: (content
   if (block.type === "accordion") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} />{(c.items || []).map((item: any, index: number) => <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2"><Field label={`Item ${index + 1}`} value={item.title || ""} onChange={(value) => { const items = [...(c.items || [])]; items[index] = { ...item, title: value }; patch({ items }); }} /><Field label="Texto" value={item.text || ""} onChange={(value) => { const items = [...(c.items || [])]; items[index] = { ...item, text: value }; patch({ items }); }} /><button className="mt-6 grid size-10 place-items-center rounded-md text-red-600 hover:bg-red-50" onClick={() => patch({ items: (c.items || []).filter((_: any, i: number) => i !== index) })}><Trash2 size={15} /></button></div>)}<button className="w-fit rounded-md bg-mist px-3 py-2 text-sm font-extrabold" onClick={() => patch({ items: [...(c.items || []), { title: "Nuevo item", text: "Contenido" }] })}>Agregar item</button></div>;
   if (block.type === "list") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} /><SelectField label="Tipo" value={c.listStyle || "bullet"} onChange={(value) => patch({ listStyle: value })} options={[["bullet", "Puntos"], ["number", "1, 2, 3"]]} /><TextField label="Items, uno por linea" value={(c.items || []).join("\n")} onChange={(value) => patch({ items: linesToItems(value) })} rows={6} /></div>;
   if (block.type === "embed") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} /><Field label="URL" value={c.url || ""} onChange={(value) => patch({ url: value })} /><Field label="Bajada" value={c.caption || ""} onChange={(value) => patch({ caption: value })} /></div>;
-  if (block.type === "custom_html") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} /><TextField label="Codigo HTML" value={c.html || ""} onChange={(value) => patch({ html: value })} rows={9} /><SelectField label="Alto" value={c.htmlSizing || "auto"} onChange={(value) => patch({ htmlSizing: value })} options={[["auto", "Segun contenido"], ["fixed", "Fijo en px"]]} /><Field label="Alto fijo px" type="number" value={String(Number(c.htmlHeight) || 420)} onChange={(value) => patch({ htmlHeight: Number(value) || 420 })} /><SelectField label="Marco" value={c.hasFrame === false ? "no" : "yes"} onChange={(value) => patch({ hasFrame: value === "yes" })} options={[["yes", "Con marco"], ["no", "Sin marco"]]} /><SelectField label="Tailwind / HyperUI" value={c.enableTailwind === false ? "no" : "yes"} onChange={(value) => patch({ enableTailwind: value === "yes" })} options={[["yes", "Activado"], ["no", "Desactivado"]]} /></div>;
+  if (block.type === "custom_html") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} /><TextField label="Codigo HTML" value={c.html || ""} onChange={(value) => patch({ html: value })} rows={9} /><SelectField label="Ancho" value={c.htmlWidthMode || "fixed"} onChange={(value) => patch({ htmlWidthMode: value })} options={[["fixed", "Fijo en px"], ["full", "Todo el bloque"]]} /><Field label="Ancho iframe px" type="number" value={String(Number(c.htmlWidth) || 520)} onChange={(value) => patch({ htmlWidth: Number(value) || 520 })} /><SelectField label="Alto" value={c.htmlSizing || "auto"} onChange={(value) => patch({ htmlSizing: value })} options={[["auto", "Segun contenido"], ["fixed", "Fijo en px"]]} /><Field label="Alto fijo px" type="number" value={String(Number(c.htmlHeight) || 420)} onChange={(value) => patch({ htmlHeight: Number(value) || 420 })} /><SelectField label="Marco" value={c.hasFrame === false ? "no" : "yes"} onChange={(value) => patch({ hasFrame: value === "yes" })} options={[["yes", "Con marco"], ["no", "Sin marco"]]} /><SelectField label="Tailwind / HyperUI" value={c.enableTailwind === false ? "no" : "yes"} onChange={(value) => patch({ enableTailwind: value === "yes" })} options={[["yes", "Activado"], ["no", "Desactivado"]]} /></div>;
   if (block.type === "continue_button") return <div className="grid gap-4"><Field label="Texto del boton" value={c.label || "Continuar"} onChange={(value) => patch({ label: value })} /><SelectField label="Tamano boton" value={c.buttonSize || "medium"} onChange={(value) => patch({ buttonSize: value })} options={[["small", "Pequeno"], ["medium", "Mediano"], ["full", "Grande / ancho completo"]]} /><HexColorField label="Color" value={c.buttonColor || "#181833"} onChange={(value) => patch({ buttonColor: value })} /></div>;
   if (block.type === "divider") return <p className="text-sm font-bold text-steel">Este bloque no necesita configuracion.</p>;
   return <QuizForm block={block} onChange={onChange} />;
@@ -1095,15 +1095,28 @@ function customHtmlSrcDoc(content: Record<string, any>, frameId: string) {
   ${tailwind}
   <style>
     html,body{margin:0;min-height:0;background:transparent;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+    body{display:flow-root;overflow:hidden}
     *,*::before,*::after{box-sizing:border-box}
   </style>
 </head>
 <body>
 ${content.html || ""}
 <script>
-  const sendHeight = () => parent.postMessage({ type: "pulsestudio-html-height", id: "${frameId}", height: Math.max(document.body.scrollHeight, document.documentElement.scrollHeight) }, "*");
+  const measureHeight = () => {
+    const children = [...document.body.children].filter((element) => element.tagName !== "SCRIPT");
+    if (!children.length) return 120;
+    const bodyTop = document.body.getBoundingClientRect().top;
+    return Math.ceil(children.reduce((height, element) => {
+      const rect = element.getBoundingClientRect();
+      const styles = window.getComputedStyle(element);
+      return Math.max(height, rect.bottom - bodyTop + parseFloat(styles.marginBottom || "0"));
+    }, 0));
+  };
+  const sendHeight = () => parent.postMessage({ type: "pulsestudio-html-height", id: "${frameId}", height: measureHeight() }, "*");
   window.addEventListener("load", sendHeight);
+  document.querySelectorAll("img").forEach((image) => image.addEventListener("load", sendHeight));
   new ResizeObserver(sendHeight).observe(document.body);
+  new ResizeObserver(sendHeight).observe(document.documentElement);
   document.addEventListener("click", (event) => {
     const link = event.target.closest && event.target.closest("a");
     if (!link) return;
@@ -1121,6 +1134,8 @@ function CustomHtmlFrame({ content }: { content: Record<string, any> }) {
   const frameId = useMemo(() => uid("html-frame"), []);
   const [height, setHeight] = useState(Number(content.htmlHeight) || 420);
   const fixed = content.htmlSizing === "fixed";
+  const fixedWidth = content.htmlWidthMode !== "full";
+  const width = Math.max(220, Number(content.htmlWidth) || 520);
 
   useEffect(() => {
     if (fixed) {
@@ -1135,7 +1150,7 @@ function CustomHtmlFrame({ content }: { content: Record<string, any> }) {
     return () => window.removeEventListener("message", onMessage);
   }, [content.htmlHeight, fixed, frameId]);
 
-  return (
+  const iframe = (
     <iframe
       className={`w-full overflow-hidden bg-white ${content.hasFrame === false ? "border-0 rounded-none" : "rounded-md border border-line shadow-sm"}`}
       sandbox="allow-scripts allow-forms allow-popups"
@@ -1144,6 +1159,7 @@ function CustomHtmlFrame({ content }: { content: Record<string, any> }) {
       title={content.title || "HTML custom"}
     />
   );
+  return fixedWidth ? <div className="mx-auto w-full" style={{ maxWidth: `${width}px` }}>{iframe}</div> : iframe;
 }
 
 function QuizPreview({ block, onStatusChange }: { block: CourseBlock; onStatusChange?: (blockId: string, correct: boolean) => void }) {
