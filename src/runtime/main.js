@@ -245,6 +245,20 @@
     }).join("");
   }
 
+  function layoutValue(value, allowed, fallback) {
+    return allowed.indexOf(value) !== -1 ? value : fallback;
+  }
+
+  function blockLayoutClass(content) {
+    var padding = layoutValue(content.blockPadding, ["none", "small", "medium", "large"], "medium");
+    var width = layoutValue(content.contentWidth, ["s", "m", "l"], "m");
+    return "block-layout block-padding-" + padding + " block-width-" + width;
+  }
+
+  function wrapBlock(block, html) {
+    return '<div class="' + blockLayoutClass(block.content || {}) + '">' + html + '</div>';
+  }
+
   function renderBlock(block) {
     if (block.type === "heading") {
       return '<article class="block reveal-block"><h2>' + richValue(block.content, "text") + '</h2></article>';
@@ -404,11 +418,11 @@
 
     var blocks = lesson.blocks.map(function (block, index) {
       if (block.type === "continue_button") {
-        if (map[index] === screen && screen < screens - 1) return renderContinue(block, screen, screens);
+        if (map[index] === screen && screen < screens - 1) return wrapBlock(block, renderContinue(block, screen, screens));
         return "";
       }
 
-      return map[index] <= screen ? renderBlock(block) : "";
+      return map[index] <= screen ? wrapBlock(block, renderBlock(block)) : "";
     }).join("");
 
     els.lesson.innerHTML = '<p class="lesson-title">Unidad ' + (state.currentLessonIndex + 1) + ' de ' + state.course.lessons.length + '</p>' +

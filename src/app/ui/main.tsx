@@ -217,6 +217,21 @@ function rich(content: Record<string, any>, field: string) {
   return content[`${field}Html`] || content[field] || "";
 }
 
+function blockPaddingClass(content: Record<string, any>) {
+  const value = content.blockPadding || "medium";
+  if (value === "none") return "px-0 py-0";
+  if (value === "small") return "px-3 py-3 md:px-4 md:py-4";
+  if (value === "large") return "px-4 py-8 md:px-14 md:py-12";
+  return "px-4 py-5 md:px-8 md:py-7";
+}
+
+function blockWidthClass(content: Record<string, any>) {
+  const value = content.contentWidth || "m";
+  if (value === "s") return "md:max-w-2xl";
+  if (value === "l") return "md:max-w-none";
+  return "md:max-w-4xl";
+}
+
 function defaultBlock(type: BlockType): CourseBlock {
   if (type === "heading") return { id: uid("b"), type, content: { text: "Nuevo titulo", textHtml: "Nuevo titulo" } };
   if (type === "paragraph") return { id: uid("b"), type, content: { text: "Escribe aqui el contenido.", textHtml: "Escribe aqui el contenido." } };
@@ -460,20 +475,20 @@ function EditorApp() {
         <button onClick={save} className="inline-flex h-9 items-center gap-2 rounded-md bg-mist px-3 text-xs font-extrabold"><Save size={14} /> Guardar</button>
         <button onClick={exportScorm} className="inline-flex h-9 items-center gap-2 rounded-md bg-ink px-3 text-xs font-extrabold text-white"><Upload size={14} /> Exportar SCORM</button>
       </div>
-      <main className="grid min-h-[calc(100vh-56px)] grid-cols-[240px_minmax(0,1fr)] gap-3 bg-[#f0f0f8] p-3">
+      <main className="grid min-h-[calc(100vh-56px)] grid-cols-[220px_minmax(0,1fr)] gap-3 bg-[#f0f0f8] p-3">
         <aside className="sticky top-[68px] flex h-[calc(100vh-80px)] flex-col overflow-hidden rounded-lg bg-white shadow-soft">
-          <section className="border-b border-line p-4">
+          <section className="border-b border-line p-3">
             <p className="text-[10px] font-black uppercase tracking-[0.12em] text-violet">Bloques</p>
-            <h2 className="mt-0.5 text-base font-black tracking-[-0.02em] text-ink">Herramientas</h2>
-            <div className="mt-3 grid grid-cols-2 gap-1">
+            <h2 className="mt-0.5 text-sm font-black tracking-[-0.02em] text-ink">Herramientas</h2>
+            <div className="mt-2 grid gap-0.5">
               {blockTools.map((tool) => <SidebarToolButton key={tool.type} tool={tool} onAdd={addBlock} />)}
             </div>
           </section>
-          <section className="flex min-h-0 flex-1 flex-col p-4">
-            <div className="mb-3 flex items-center justify-between">
+          <section className="flex min-h-0 flex-1 flex-col p-3">
+            <div className="mb-2.5 flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.12em] text-violet">Curso</p>
-                <h2 className="text-lg font-black tracking-[-0.02em] text-ink">Unidades</h2>
+                <h2 className="text-base font-black tracking-[-0.02em] text-ink">Unidades</h2>
               </div>
               <button className="rounded-md bg-mist px-2.5 py-1.5 text-xs font-extrabold" onClick={addLesson}>Agregar</button>
             </div>
@@ -544,8 +559,8 @@ function CourseSettingsDialog({ course, onChange }: { course: Course; onChange: 
 
 function SidebarToolButton({ tool, onAdd }: { tool: { type: BlockType; label: string; icon: React.ReactNode }; onAdd: (type: BlockType) => void }) {
   return (
-    <button onClick={() => onAdd(tool.type)} className="group flex h-8 min-w-0 items-center gap-1.5 rounded-md px-1.5 text-left text-[11px] font-extrabold text-ink transition hover:bg-mist">
-      <span className="grid size-6 shrink-0 place-items-center rounded-md bg-mist text-plum transition group-hover:bg-white group-hover:text-violet">{tool.icon}</span>
+    <button onClick={() => onAdd(tool.type)} className="group flex h-7 min-w-0 items-center gap-2 rounded-md px-1.5 text-left text-[11px] font-bold text-ink transition hover:bg-mist">
+      <span className="grid size-5 shrink-0 place-items-center rounded bg-mist text-plum transition group-hover:bg-white group-hover:text-violet">{tool.icon}</span>
       <span className="truncate">{tool.label}</span>
     </button>
   );
@@ -608,11 +623,23 @@ function TextField({ label, value, onChange, rows = 3 }: { label: string; value:
 }
 
 function BlockShell({ block, editing, onEdit, onSave, onMove, onDelete, onChange }: { block: CourseBlock; editing: boolean; onEdit: () => void; onSave: () => void; onMove: (direction: number) => void; onDelete: () => void; onChange: (content: Record<string, any>) => void }) {
+  const patch = (next: Record<string, any>) => onChange({ ...block.content, ...next });
   return (
     <article className={`grid grid-cols-[64px_minmax(0,1fr)_auto] overflow-hidden rounded-md border ${editing ? "border-violet bg-white shadow-soft" : "border-line bg-white"}`}>
       <button onClick={onEdit} className={`border-r border-line text-[11px] font-black ${editing ? "bg-mist text-ink" : "text-violet hover:bg-mist"}`}>Editar</button>
-      <div className="p-4">
-        {editing ? <BlockForm block={block} onChange={onChange} /> : <BlockPreview block={block} />}
+      <div className="p-0">
+        {editing ? (
+          <>
+            <BlockLayoutControls content={block.content} onChange={patch} />
+            <BlockContentFrame block={block}>
+              <BlockForm block={block} onChange={onChange} />
+            </BlockContentFrame>
+          </>
+        ) : (
+          <BlockContentFrame block={block}>
+            <BlockPreview block={block} />
+          </BlockContentFrame>
+        )}
       </div>
       <div className="flex items-center gap-0.5 p-3">
         <IconButton label="Subir" onClick={() => onMove(-1)}><ArrowUp size={12} /></IconButton>
@@ -621,6 +648,36 @@ function BlockShell({ block, editing, onEdit, onSave, onMove, onDelete, onChange
       </div>
       {editing ? <div className="col-span-3 flex justify-end border-t border-line p-3"><button onClick={onSave} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-ink px-3 text-xs font-extrabold text-white"><Save size={13} /> Guardar bloque</button></div> : null}
     </article>
+  );
+}
+
+function BlockLayoutControls({ content, onChange }: { content: Record<string, any>; onChange: (patch: Record<string, any>) => void }) {
+  return (
+    <div className="flex flex-wrap items-center gap-3 border-b border-line bg-[#fbfbff] px-3 py-2">
+      <SegmentedControl label="Padding" value={content.blockPadding || "medium"} options={[["none", "Ninguno"], ["small", "Peq."], ["medium", "Med."], ["large", "Grande"]]} onChange={(value) => onChange({ blockPadding: value })} />
+      <SegmentedControl label="Ancho" value={content.contentWidth || "m"} options={[["s", "S"], ["m", "M"], ["l", "L"]]} onChange={(value) => onChange({ contentWidth: value })} />
+    </div>
+  );
+}
+
+function SegmentedControl({ label, value, options, onChange }: { label: string; value: string; options: string[][]; onChange: (value: string) => void }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-[10px] font-black uppercase tracking-[0.1em] text-steel">{label}</span>
+      <div className="flex overflow-hidden rounded-md border border-line bg-white">
+        {options.map(([id, name]) => <button key={id} onClick={() => onChange(id)} className={`h-7 px-2.5 text-[11px] font-extrabold ${value === id ? "bg-ink text-white" : "text-steel hover:bg-mist"}`}>{name}</button>)}
+      </div>
+    </div>
+  );
+}
+
+function BlockContentFrame({ block, children }: { block: CourseBlock; children: React.ReactNode }) {
+  return (
+    <div className={blockPaddingClass(block.content)}>
+      <div className={`w-full ${blockWidthClass(block.content)} mx-auto`}>
+        {children}
+      </div>
+    </div>
   );
 }
 
@@ -641,7 +698,7 @@ function BlockForm({ block, onChange }: { block: CourseBlock; onChange: (content
   const patch = (next: Record<string, any>) => onChange({ ...c, ...next });
 
   if (block.type === "heading" || block.type === "paragraph") return <RichTextarea label="Texto" value={rich(c, "text")} onChange={(html) => patch({ textHtml: html, text: htmlToText(html) })} rows={block.type === "heading" ? 2 : 7} />;
-  if (block.type === "statement") return <div className="grid gap-4"><RichTextarea label="Statement" value={rich(c, "text")} onChange={(html) => patch({ textHtml: html, text: htmlToText(html) })} rows={5} /><SelectField label="Ancho" value={c.width || "normal"} onChange={(value) => patch({ width: value })} options={[["narrow", "Estrecho"], ["normal", "Normal"], ["wide", "Ancho"]]} /></div>;
+  if (block.type === "statement") return <RichTextarea label="Statement" value={rich(c, "text")} onChange={(html) => patch({ textHtml: html, text: htmlToText(html) })} rows={5} />;
   if (block.type === "image_text") return <div className="grid gap-4"><Field label="URL imagen" value={c.imageUrl || ""} onChange={(value) => patch({ imageUrl: value })} /><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} /><RichTextarea label="Texto" value={rich(c, "text")} onChange={(html) => patch({ textHtml: html, text: htmlToText(html) })} /></div>;
   if (block.type === "embed") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} /><Field label="URL" value={c.url || ""} onChange={(value) => patch({ url: value })} /><Field label="Bajada" value={c.caption || ""} onChange={(value) => patch({ caption: value })} /></div>;
   if (block.type === "custom_html") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} /><TextField label="Codigo HTML" value={c.html || ""} onChange={(value) => patch({ html: value })} rows={9} /></div>;
@@ -768,7 +825,7 @@ function PreviewApp() {
         <div className="bg-gradient-to-br from-plum to-ink p-6 text-white"><p className="text-[11px] font-black uppercase tracking-[0.12em]">Course preview</p><h1 className="mt-5 text-2xl font-black">{course.title}</h1><p className="mt-6 text-xs font-black">50% COMPLETE</p><div className="mt-3 h-1 bg-white/35"><i className="block h-full w-1/2 bg-white" /></div></div>
         <nav className="grid gap-1.5 p-4">{course.lessons.map((item, index) => <button key={item.id} onClick={() => setLessonIndex(index)} className={`grid grid-cols-[24px_1fr_auto] items-center gap-2 rounded-md px-2.5 py-2 text-left ${index === lessonIndex ? "bg-mist" : ""}`}><span className="grid size-5 place-items-center rounded-full border border-line text-xs font-bold">{index + 1}</span><strong className="truncate text-sm">{item.title}</strong><small className="text-[11px] font-bold text-steel">{index <= lessonIndex ? "Disponible" : "Bloqueada"}</small></button>)}</nav>
       </aside>
-      <main className="p-8"><a className="mb-7 inline-flex rounded-md border border-line px-4 py-2 text-sm font-extrabold" href={`${appRoute("/")}?course=${course.id}`}>Volver al editor</a><section className="mx-auto max-w-5xl"><p className="text-xs font-black uppercase tracking-[0.12em] text-violet">Unidad {lessonIndex + 1} de {course.lessons.length}</p><h2 className="mb-7 text-4xl font-black tracking-[-0.04em]">{lesson.title}</h2><div className="grid gap-6">{lesson.blocks.map((block) => <div className="fade-up" key={block.id}><BlockPreview block={block} /></div>)}</div>{lessonIndex < course.lessons.length - 1 ? <div className="mt-8 rounded-lg border border-dashed border-violet/40 bg-mist p-6 text-center"><button onClick={() => setLessonIndex(lessonIndex + 1)} className="rounded-md bg-ink px-5 py-3 font-extrabold text-white">Ir a la siguiente unidad</button></div> : null}</section></main>
+      <main className="p-8"><a className="mb-7 inline-flex rounded-md border border-line px-4 py-2 text-sm font-extrabold" href={`${appRoute("/")}?course=${course.id}`}>Volver al editor</a><section className="mx-auto max-w-5xl"><p className="text-xs font-black uppercase tracking-[0.12em] text-violet">Unidad {lessonIndex + 1} de {course.lessons.length}</p><h2 className="mb-7 text-4xl font-black tracking-[-0.04em]">{lesson.title}</h2><div className="grid gap-6">{lesson.blocks.map((block) => <div className="fade-up" key={block.id}><BlockContentFrame block={block}><BlockPreview block={block} /></BlockContentFrame></div>)}</div>{lessonIndex < course.lessons.length - 1 ? <div className="mt-8 rounded-lg border border-dashed border-violet/40 bg-mist p-6 text-center"><button onClick={() => setLessonIndex(lessonIndex + 1)} className="rounded-md bg-ink px-5 py-3 font-extrabold text-white">Ir a la siguiente unidad</button></div> : null}</section></main>
     </div>
   );
 }
