@@ -460,7 +460,7 @@ function EditorApp() {
         <button onClick={save} className="inline-flex h-9 items-center gap-2 rounded-md bg-mist px-3 text-xs font-extrabold"><Save size={14} /> Guardar</button>
         <button onClick={exportScorm} className="inline-flex h-9 items-center gap-2 rounded-md bg-ink px-3 text-xs font-extrabold text-white"><Upload size={14} /> Exportar SCORM</button>
       </div>
-      <main className="grid min-h-[calc(100vh-56px)] grid-cols-[280px_minmax(0,1fr)] gap-3 bg-[#f0f0f8] p-3">
+      <main className="grid min-h-[calc(100vh-56px)] grid-cols-[240px_minmax(0,1fr)] gap-3 bg-[#f0f0f8] p-3">
         <aside className="sticky top-[68px] flex h-[calc(100vh-80px)] flex-col overflow-hidden rounded-lg bg-white shadow-soft">
           <section className="border-b border-line p-4">
             <p className="text-[10px] font-black uppercase tracking-[0.12em] text-violet">Bloques</p>
@@ -489,12 +489,11 @@ function EditorApp() {
           </section>
         </aside>
         <section className="relative rounded-lg bg-white p-4 shadow-soft">
-          <div className="mb-4 flex items-start justify-between gap-4 border-b border-line pb-3">
+          <div className="mb-4 border-b border-line pb-3">
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.12em] text-violet">Editor</p>
               <input value={lesson.title} onChange={(event) => updateCourse((draft) => { draft.lessons[lessonIndex].title = event.target.value; })} className="mt-0.5 w-full border-0 bg-transparent text-lg font-black tracking-[-0.02em] text-ink outline-none" />
             </div>
-            <button onClick={() => setEditingBlockId(null)} className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-extrabold text-ink">Ver como queda</button>
           </div>
           <div className="grid gap-2.5 pb-20">
             {lesson.blocks.map((block, index) => (
@@ -690,9 +689,69 @@ function BlockPreview({ block }: { block: CourseBlock }) {
 
 function QuizPreview({ block }: { block: CourseBlock }) {
   const c = block.content;
-  if (block.type === "quiz_fill_blank") return <article className="rounded-md border border-line p-4"><strong className="text-base">{c.question}</strong><p className="mt-3 text-sm">{c.prompt}</p><input disabled className="mt-3 h-9 w-full rounded-md border border-line" /><button className="mt-3 rounded-md bg-mist px-4 py-2 text-sm font-extrabold">Revisar</button></article>;
-  if (block.type === "quiz_matching") return <article className="rounded-md border border-line p-4"><strong className="text-base">{c.question}</strong><div className="mt-3 grid max-w-3xl gap-2">{(c.pairs || []).map((pair: any, index: number) => <div className="grid grid-cols-[150px_1fr] items-center gap-3 rounded-md border border-violet/20 bg-[#fbfbff] p-3" key={index}><span className="text-sm font-bold">{pair.prompt}</span><select className="h-9 rounded-md border border-line px-2 text-sm"><option>{pair.match}</option></select></div>)}</div><button className="mt-3 rounded-md bg-mist px-4 py-2 text-sm font-extrabold">Revisar</button></article>;
-  return <article className="rounded-md border border-line p-4"><strong className="text-base">{c.question}</strong><div className="mt-3 grid gap-2">{(c.options || []).map((option: string, index: number) => <label key={index} className="quiz-option grid grid-cols-[16px_1fr] items-center gap-2.5 rounded-md border border-violet/20 bg-[#fbfbff] p-3"><input type={block.type === "quiz_multiple_response" ? "checkbox" : "radio"} readOnly /><span className="text-sm font-semibold">{option}</span></label>)}</div><button className="mt-3 rounded-md bg-mist px-4 py-2 text-sm font-extrabold">Revisar</button></article>;
+  const [singleAnswer, setSingleAnswer] = useState<number | null>(null);
+  const [multipleAnswers, setMultipleAnswers] = useState<number[]>([]);
+  const [blankAnswer, setBlankAnswer] = useState("");
+  const [matchingAnswers, setMatchingAnswers] = useState<Record<number, string>>({});
+  const [feedback, setFeedback] = useState("");
+  const options = c.options || [];
+  const pairs = c.pairs || [];
+  const matches = pairs.map((pair: any) => pair.match);
+
+  function setMultiple(index: number, checked: boolean) {
+    setFeedback("");
+    setMultipleAnswers((current) => {
+      const next = new Set(current);
+      checked ? next.add(index) : next.delete(index);
+      return [...next].sort((a, b) => a - b);
+    });
+  }
+
+  function sameNumbers(a: number[], b: number[]) {
+    return a.length === b.length && [...a].sort().every((value, index) => value === [...b].sort()[index]);
+  }
+
+  function review() {
+    if (block.type === "quiz_single_choice") {
+      setFeedback(singleAnswer === c.correctAnswer ? c.feedbackCorrect || "Correcto." : c.feedbackIncorrect || "Revisa la respuesta.");
+      return;
+    }
+    if (block.type === "quiz_multiple_response") {
+      setFeedback(sameNumbers(multipleAnswers, c.correctAnswers || []) ? c.feedbackCorrect || "Correcto." : c.feedbackIncorrect || "Revisa las alternativas.");
+      return;
+    }
+    if (block.type === "quiz_fill_blank") {
+      const expected = (c.answers || []).map((answer: string) => c.caseSensitive ? answer.trim() : answer.trim().toLowerCase());
+      const given = c.caseSensitive ? blankAnswer.trim() : blankAnswer.trim().toLowerCase();
+      setFeedback(expected.includes(given) ? c.feedbackCorrect || "Correcto." : c.feedbackIncorrect || "Revisa la respuesta.");
+      return;
+    }
+    if (block.type === "quiz_matching") {
+      const correct = pairs.every((pair: any, index: number) => matchingAnswers[index] === pair.match);
+      setFeedback(correct ? c.feedbackCorrect || "Correcto." : c.feedbackIncorrect || "Revisa las coincidencias.");
+    }
+  }
+
+  if (block.type === "quiz_fill_blank") {
+    return <article className="rounded-md border border-line p-4"><strong className="text-base">{c.question}</strong><p className="mt-3 text-sm">{c.prompt}</p><input value={blankAnswer} onChange={(event) => { setBlankAnswer(event.target.value); setFeedback(""); }} className="mt-3 h-9 w-full rounded-md border border-line px-3 text-sm outline-none focus:border-violet" /><QuizActions feedback={feedback} onReview={review} /></article>;
+  }
+  if (block.type === "quiz_matching") {
+    return <article className="rounded-md border border-line p-4"><strong className="text-base">{c.question}</strong><div className="mt-3 grid max-w-3xl gap-2">{pairs.map((pair: any, index: number) => <div className="grid grid-cols-[130px_1fr] items-center gap-3 rounded-md border border-violet/20 bg-[#fbfbff] p-2.5" key={index}><span className="text-sm font-bold">{pair.prompt}</span><select value={matchingAnswers[index] || ""} onChange={(event) => { setMatchingAnswers((current) => ({ ...current, [index]: event.target.value })); setFeedback(""); }} className="h-9 rounded-md border border-line px-2 text-sm outline-none focus:border-violet"><option value="">Selecciona</option>{matches.map((match: string) => <option key={match} value={match}>{match}</option>)}</select></div>)}</div><QuizActions feedback={feedback} onReview={review} /></article>;
+  }
+  return <article className="rounded-md border border-line p-4"><strong className="text-base">{c.question}</strong><div className="mt-3 grid gap-2">{options.map((option: string, index: number) => {
+    const multiple = block.type === "quiz_multiple_response";
+    const checked = multiple ? multipleAnswers.includes(index) : singleAnswer === index;
+    return <label key={index} className="quiz-option grid grid-cols-[16px_1fr] items-center gap-2.5 rounded-md border border-violet/20 bg-[#fbfbff] p-3"><input name={block.id} type={multiple ? "checkbox" : "radio"} checked={checked} onChange={(event) => multiple ? setMultiple(index, event.target.checked) : (setSingleAnswer(index), setFeedback(""))} /><span className="text-sm font-semibold">{option}</span></label>;
+  })}</div><QuizActions feedback={feedback} onReview={review} /></article>;
+}
+
+function QuizActions({ feedback, onReview }: { feedback: string; onReview: () => void }) {
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-3">
+      <button onClick={onReview} className="rounded-md bg-mist px-4 py-2 text-sm font-extrabold">Revisar</button>
+      {feedback ? <p className={`text-sm font-extrabold ${feedback.toLowerCase().startsWith("correct") ? "text-violet" : "text-red-600"}`}>{feedback}</p> : null}
+    </div>
+  );
 }
 
 function PreviewApp() {
@@ -704,12 +763,12 @@ function PreviewApp() {
   if (!course) return <div className="grid min-h-screen place-items-center text-sm font-bold text-steel">Cargando vista previa...</div>;
   const lesson = course.lessons[lessonIndex] || course.lessons[0];
   return (
-    <div className="grid min-h-screen grid-cols-[300px_1fr] bg-white">
-      <aside className="border-r border-line">
-        <div className="bg-gradient-to-br from-plum to-ink p-8 text-white"><p className="text-xs font-black uppercase tracking-[0.12em]">Course preview</p><h1 className="mt-6 text-3xl font-black">{course.title}</h1><p className="mt-7 text-sm font-black">50% COMPLETE</p><div className="mt-3 h-1 bg-white/35"><i className="block h-full w-1/2 bg-white" /></div></div>
-        <nav className="grid gap-2 p-5">{course.lessons.map((item, index) => <button key={item.id} onClick={() => setLessonIndex(index)} className={`grid grid-cols-[28px_1fr_auto] items-center gap-3 rounded-md px-3 py-3 text-left ${index === lessonIndex ? "bg-mist" : ""}`}><span className="grid size-6 place-items-center rounded-full border border-line text-sm font-bold">{index + 1}</span><strong>{item.title}</strong><small className="font-bold text-steel">{index <= lessonIndex ? "Disponible" : "Bloqueada"}</small></button>)}</nav>
+    <div className="grid min-h-screen grid-cols-[260px_1fr] bg-white">
+      <aside className="sticky top-0 h-screen overflow-y-auto border-r border-line bg-white">
+        <div className="bg-gradient-to-br from-plum to-ink p-6 text-white"><p className="text-[11px] font-black uppercase tracking-[0.12em]">Course preview</p><h1 className="mt-5 text-2xl font-black">{course.title}</h1><p className="mt-6 text-xs font-black">50% COMPLETE</p><div className="mt-3 h-1 bg-white/35"><i className="block h-full w-1/2 bg-white" /></div></div>
+        <nav className="grid gap-1.5 p-4">{course.lessons.map((item, index) => <button key={item.id} onClick={() => setLessonIndex(index)} className={`grid grid-cols-[24px_1fr_auto] items-center gap-2 rounded-md px-2.5 py-2 text-left ${index === lessonIndex ? "bg-mist" : ""}`}><span className="grid size-5 place-items-center rounded-full border border-line text-xs font-bold">{index + 1}</span><strong className="truncate text-sm">{item.title}</strong><small className="text-[11px] font-bold text-steel">{index <= lessonIndex ? "Disponible" : "Bloqueada"}</small></button>)}</nav>
       </aside>
-      <main className="p-10"><a className="mb-8 inline-flex rounded-md border border-line px-4 py-2 font-extrabold" href={`${appRoute("/")}?course=${course.id}`}>Volver al editor</a><section className="mx-auto max-w-5xl"><p className="text-xs font-black uppercase tracking-[0.12em] text-violet">Unidad {lessonIndex + 1} de {course.lessons.length}</p><h2 className="mb-8 text-4xl font-black tracking-[-0.04em]">{lesson.title}</h2><div className="grid gap-7">{lesson.blocks.map((block) => <div className="fade-up" key={block.id}><BlockPreview block={block} /></div>)}</div>{lessonIndex < course.lessons.length - 1 ? <div className="mt-8 rounded-lg border border-dashed border-violet/40 bg-mist p-6 text-center"><button onClick={() => setLessonIndex(lessonIndex + 1)} className="rounded-md bg-ink px-5 py-3 font-extrabold text-white">Ir a la siguiente unidad</button></div> : null}</section></main>
+      <main className="p-8"><a className="mb-7 inline-flex rounded-md border border-line px-4 py-2 text-sm font-extrabold" href={`${appRoute("/")}?course=${course.id}`}>Volver al editor</a><section className="mx-auto max-w-5xl"><p className="text-xs font-black uppercase tracking-[0.12em] text-violet">Unidad {lessonIndex + 1} de {course.lessons.length}</p><h2 className="mb-7 text-4xl font-black tracking-[-0.04em]">{lesson.title}</h2><div className="grid gap-6">{lesson.blocks.map((block) => <div className="fade-up" key={block.id}><BlockPreview block={block} /></div>)}</div>{lessonIndex < course.lessons.length - 1 ? <div className="mt-8 rounded-lg border border-dashed border-violet/40 bg-mist p-6 text-center"><button onClick={() => setLessonIndex(lessonIndex + 1)} className="rounded-md bg-ink px-5 py-3 font-extrabold text-white">Ir a la siguiente unidad</button></div> : null}</section></main>
     </div>
   );
 }
