@@ -278,10 +278,12 @@
     }
 
     if (block.type === "image_gallery") {
+      var imageHeight = Number(block.content.imageHeight) || (block.content.imageSize === "small" ? 180 : block.content.imageSize === "medium" ? 300 : block.content.imageSize === "full" ? 620 : 420);
+      var frameClass = block.content.hasFrame === false ? " image-gallery-no-frame" : " image-gallery-frame";
       var images = (block.content.images || []).map(function (image) {
-        return '<img src="' + escapeHtml(image.url) + '" alt="' + escapeHtml(image.alt || "") + '">';
+        return '<img style="max-height:' + escapeHtml(String(imageHeight)) + 'px" src="' + escapeHtml(image.url) + '" alt="' + escapeHtml(image.alt || "") + '">';
       }).join("");
-      return '<article class="block image-gallery image-gallery-' + escapeHtml(block.content.imageSize || "large") + ' reveal-block">' +
+      return '<article class="block image-gallery' + frameClass + ' reveal-block">' +
         (block.content.title ? '<strong>' + escapeHtml(block.content.title) + '</strong>' : '') +
         '<div>' + images + '</div>' +
         '</article>';

@@ -347,7 +347,7 @@ function defaultBlock(type: BlockType): CourseBlock {
   if (type === "image_text") {
     return { id: uid("b"), type, content: { imageUrl: "assets/demo-learning.svg", imageAlt: "Imagen", imageSize: 180, title: "Titulo del bloque", text: "Descripcion asociada.", textHtml: "Descripcion asociada." } };
   }
-  if (type === "image_gallery") return { id: uid("b"), type, content: { title: "Imagen", images: [{ url: "assets/demo-learning.svg", alt: "Imagen" }], imageSize: "large" } };
+  if (type === "image_gallery") return { id: uid("b"), type, content: { title: "Imagen", images: [{ url: "assets/demo-learning.svg", alt: "Imagen" }], imageHeight: 360, hasFrame: true } };
   if (type === "statement") return { id: uid("b"), type, content: { text: "You're the master of your life. Steer it with intention.", textHtml: "You're the master of your life. Steer it with intention.", showDivider: true, width: "normal" } };
   if (type === "flip_cards") return { id: uid("b"), type, content: { title: "Tarjetas interactivas", cards: [{ front: "Concepto", back: "Texto que aparece al hacer clic." }, { front: "Idea clave", back: "Otra explicacion breve." }] } };
   if (type === "accordion") return { id: uid("b"), type, content: { title: "Acordeon", items: [{ title: "Pregunta o tema", text: "Contenido desplegable." }, { title: "Otro tema", text: "Mas informacion." }] } };
@@ -848,6 +848,7 @@ function BlockContentFrame({ block, children }: { block: CourseBlock; children: 
 
 function RichTextarea({ label, value, onChange, rows = 4 }: { label: string; value: string; onChange: (html: string) => void; rows?: number }) {
   const editorRef = useRef<HTMLDivElement | null>(null);
+  const savedRangeRef = useRef<Range | null>(null);
   const [size, setSize] = useState("16");
   const [hex, setHex] = useState("#181833");
 
@@ -855,11 +856,30 @@ function RichTextarea({ label, value, onChange, rows = 4 }: { label: string; val
     if (editorRef.current && editorRef.current.innerHTML !== value) editorRef.current.innerHTML = value || "";
   }, [value]);
 
+  function saveSelection() {
+    const editor = editorRef.current;
+    const selection = window.getSelection();
+    if (!editor || !selection || selection.rangeCount === 0) return;
+    const range = selection.getRangeAt(0);
+    if (editor.contains(range.commonAncestorContainer)) savedRangeRef.current = range.cloneRange();
+  }
+
+  function restoreSelection() {
+    const range = savedRangeRef.current;
+    if (!range) return;
+    const selection = window.getSelection();
+    if (!selection) return;
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
   function sync() {
+    saveSelection();
     onChange(editorRef.current?.innerHTML || "");
   }
 
   function command(name: string, commandValue?: string) {
+    restoreSelection();
     editorRef.current?.focus();
     document.execCommand(name, false, commandValue);
     sync();
@@ -886,18 +906,18 @@ function RichTextarea({ label, value, onChange, rows = 4 }: { label: string; val
     <div className="grid gap-2">
       <span className="text-xs font-extrabold text-steel">{label}</span>
       <div className="flex flex-wrap items-center gap-1">
-        <button type="button" onClick={() => command("bold")} className="grid size-7 place-items-center rounded-md bg-mist text-sm font-black">B</button>
-        <button type="button" onClick={() => command("italic")} className="grid size-7 place-items-center rounded-md bg-mist text-sm font-black italic">I</button>
-        <button type="button" onClick={() => command("underline")} className="grid size-7 place-items-center rounded-md bg-mist text-sm font-black underline">U</button>
-        <button type="button" onClick={() => command("justifyLeft")} className="grid size-7 place-items-center rounded-md bg-mist text-sm font-black"><AlignLeft size={14} /></button>
-        <button type="button" onClick={() => command("justifyCenter")} className="grid size-7 place-items-center rounded-md bg-mist text-sm font-black"><AlignCenter size={14} /></button>
-        <button type="button" onClick={() => command("justifyRight")} className="grid size-7 place-items-center rounded-md bg-mist text-sm font-black"><AlignRight size={14} /></button>
-        <input type="number" min="8" max="72" value={size} onChange={(event) => applySize(event.target.value)} className="h-7 w-14 rounded-md border border-line px-2 text-xs font-extrabold" title="Tamano de letra" />
-        {colors.map((color) => <button key={color} type="button" onClick={() => applyColor(color)} className="size-7 rounded-full border border-line" style={{ background: color }} />)}
+        <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => command("bold")} className="grid size-7 place-items-center rounded-md bg-mist text-sm font-black">B</button>
+        <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => command("italic")} className="grid size-7 place-items-center rounded-md bg-mist text-sm font-black italic">I</button>
+        <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => command("underline")} className="grid size-7 place-items-center rounded-md bg-mist text-sm font-black underline">U</button>
+        <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => command("justifyLeft")} className="grid size-7 place-items-center rounded-md bg-mist text-sm font-black"><AlignLeft size={14} /></button>
+        <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => command("justifyCenter")} className="grid size-7 place-items-center rounded-md bg-mist text-sm font-black"><AlignCenter size={14} /></button>
+        <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => command("justifyRight")} className="grid size-7 place-items-center rounded-md bg-mist text-sm font-black"><AlignRight size={14} /></button>
+        <input type="number" min="8" max="72" value={size} onMouseDown={saveSelection} onFocus={saveSelection} onChange={(event) => applySize(event.target.value)} className="h-7 w-14 rounded-md border border-line px-2 text-xs font-extrabold" title="Tamano de letra" />
+        {colors.map((color) => <button key={color} type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => applyColor(color)} className="size-7 rounded-full border border-line" style={{ background: color }} />)}
         <input type="color" value={/^#[0-9a-fA-F]{6}$/.test(hex) ? hex : "#181833"} onChange={(event) => applyColor(event.target.value)} className="size-7 rounded-full border border-line bg-white p-0" />
         <input value={hex} onChange={(event) => applyColor(event.target.value)} className="h-7 w-24 rounded-md border border-line px-2 text-xs font-bold outline-none focus:border-violet" placeholder="#181833" />
       </div>
-      <div ref={editorRef} contentEditable suppressContentEditableWarning onInput={sync} className="min-h-28 rounded-md border border-line bg-white p-3 text-sm font-semibold leading-7 text-ink outline-none focus:border-violet" style={{ minHeight: `${Math.max(rows, 3) * 34}px` }} />
+      <div ref={editorRef} contentEditable suppressContentEditableWarning onInput={sync} onMouseUp={saveSelection} onKeyUp={saveSelection} onBlur={saveSelection} className="min-h-28 rounded-md border border-line bg-white p-3 text-sm font-semibold leading-7 text-ink outline-none focus:border-violet" style={{ minHeight: `${Math.max(rows, 3) * 34}px` }} />
     </div>
   );
 }
@@ -909,7 +929,7 @@ function BlockForm({ block, onChange }: { block: CourseBlock; onChange: (content
   if (block.type === "heading" || block.type === "paragraph") return <RichTextarea label="Texto" value={rich(c, "text")} onChange={(html) => patch({ textHtml: html, text: htmlToText(html) })} rows={block.type === "heading" ? 2 : 7} />;
   if (block.type === "statement") return <RichTextarea label="Statement" value={rich(c, "text")} onChange={(html) => patch({ textHtml: html, text: htmlToText(html) })} rows={5} />;
   if (block.type === "image_text") return <div className="grid gap-4"><Field label="URL imagen" value={c.imageUrl || ""} onChange={(value) => patch({ imageUrl: value })} /><Field label="Tamano imagen px" type="number" value={String(c.imageSize || 180)} onChange={(value) => patch({ imageSize: Number(value) || 180 })} /><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} /><RichTextarea label="Texto" value={rich(c, "text")} onChange={(html) => patch({ textHtml: html, text: htmlToText(html) })} /></div>;
-  if (block.type === "image_gallery") return <div className="grid gap-4"><Field label="Titulo opcional" value={c.title || ""} onChange={(value) => patch({ title: value })} /><TextField label="URLs de imagen, una por linea" value={imagesToLines(c.images || [])} onChange={(value) => patch({ images: linesToImages(value) })} rows={5} /><SelectField label="Tamano" value={c.imageSize || "large"} onChange={(value) => patch({ imageSize: value })} options={[["small", "Pequeno"], ["medium", "Mediano"], ["large", "Grande"], ["full", "Ancho completo"]]} /></div>;
+  if (block.type === "image_gallery") return <ImageGalleryForm content={c} onChange={patch} />;
   if (block.type === "flip_cards") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} />{(c.cards || []).map((card: any, index: number) => <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2"><Field label={`Frente ${index + 1}`} value={card.front || ""} onChange={(value) => { const cards = [...(c.cards || [])]; cards[index] = { ...card, front: value }; patch({ cards }); }} /><Field label="Reverso" value={card.back || ""} onChange={(value) => { const cards = [...(c.cards || [])]; cards[index] = { ...card, back: value }; patch({ cards }); }} /><button className="mt-6 grid size-10 place-items-center rounded-md text-red-600 hover:bg-red-50" onClick={() => patch({ cards: (c.cards || []).filter((_: any, i: number) => i !== index) })}><Trash2 size={15} /></button></div>)}<button className="w-fit rounded-md bg-mist px-3 py-2 text-sm font-extrabold" onClick={() => patch({ cards: [...(c.cards || []), { front: "Nueva tarjeta", back: "Texto oculto" }] })}>Agregar tarjeta</button></div>;
   if (block.type === "accordion") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} />{(c.items || []).map((item: any, index: number) => <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2"><Field label={`Item ${index + 1}`} value={item.title || ""} onChange={(value) => { const items = [...(c.items || [])]; items[index] = { ...item, title: value }; patch({ items }); }} /><Field label="Texto" value={item.text || ""} onChange={(value) => { const items = [...(c.items || [])]; items[index] = { ...item, text: value }; patch({ items }); }} /><button className="mt-6 grid size-10 place-items-center rounded-md text-red-600 hover:bg-red-50" onClick={() => patch({ items: (c.items || []).filter((_: any, i: number) => i !== index) })}><Trash2 size={15} /></button></div>)}<button className="w-fit rounded-md bg-mist px-3 py-2 text-sm font-extrabold" onClick={() => patch({ items: [...(c.items || []), { title: "Nuevo item", text: "Contenido" }] })}>Agregar item</button></div>;
   if (block.type === "list") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} /><SelectField label="Tipo" value={c.listStyle || "bullet"} onChange={(value) => patch({ listStyle: value })} options={[["bullet", "Puntos"], ["number", "1, 2, 3"]]} /><TextField label="Items, uno por linea" value={(c.items || []).join("\n")} onChange={(value) => patch({ items: linesToItems(value) })} rows={6} /></div>;
@@ -922,6 +942,33 @@ function BlockForm({ block, onChange }: { block: CourseBlock; onChange: (content
 
 function SelectField({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: string[][] }) {
   return <label className="grid gap-2 text-xs font-extrabold text-steel">{label}<select value={value} onChange={(event) => onChange(event.target.value)} className="h-10 rounded-md border border-line px-3 text-sm font-semibold text-ink">{options.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>;
+}
+
+function ImageGalleryForm({ content, onChange }: { content: Record<string, any>; onChange: (patch: Record<string, any>) => void }) {
+  const images = content.images?.length ? content.images : [{ url: "", alt: "Imagen" }];
+
+  function updateImage(index: number, patch: Record<string, string>) {
+    const next = images.map((image: any, itemIndex: number) => itemIndex === index ? { ...image, ...patch } : image);
+    onChange({ images: next });
+  }
+
+  return (
+    <div className="grid gap-4">
+      <Field label="Titulo opcional" value={content.title || ""} onChange={(value) => onChange({ title: value })} />
+      <div className="grid gap-2">
+        <span className="text-xs font-extrabold text-steel">Imagenes</span>
+        {images.map((image: any, index: number) => (
+          <div key={index} className="grid grid-cols-[1fr_auto] gap-2">
+            <input value={image.url || ""} onChange={(event) => updateImage(index, { url: event.target.value })} placeholder="https://..." className="h-10 rounded-md border border-line px-3 text-sm font-semibold text-ink outline-none focus:border-violet" />
+            <button type="button" className="grid size-10 place-items-center rounded-md text-red-600 hover:bg-red-50" onClick={() => onChange({ images: images.filter((_: any, itemIndex: number) => itemIndex !== index) })}><Trash2 size={15} /></button>
+          </div>
+        ))}
+        <button type="button" className="w-fit rounded-md bg-mist px-3 py-2 text-sm font-extrabold" onClick={() => onChange({ images: [...images, { url: "", alt: "Imagen" }] })}>Agregar imagen</button>
+      </div>
+      <Field label="Alto maximo en px" type="number" value={String(Number(content.imageHeight) || imageHeightPx(content))} onChange={(value) => onChange({ imageHeight: Number(value) || 360 })} />
+      <SelectField label="Marco" value={content.hasFrame === false ? "no" : "yes"} onChange={(value) => onChange({ hasFrame: value === "yes" })} options={[["yes", "Con marco"], ["no", "Sin marco"]]} />
+    </div>
+  );
 }
 
 function QuizForm({ block, onChange }: { block: CourseBlock; onChange: (content: Record<string, any>) => void }) {
@@ -961,16 +1008,18 @@ function BlockPreview({ block, onQuizStatusChange }: { block: CourseBlock; onQui
   return <QuizPreview block={block} onStatusChange={onQuizStatusChange} />;
 }
 
-function imageGalleryClass(size = "large") {
-  if (size === "small") return "max-h-44";
-  if (size === "medium") return "max-h-72";
-  if (size === "full") return "max-h-none";
-  return "max-h-[420px]";
+function imageHeightPx(content: Record<string, any>) {
+  if (Number(content.imageHeight)) return Number(content.imageHeight);
+  if (content.imageSize === "small") return 180;
+  if (content.imageSize === "medium") return 300;
+  if (content.imageSize === "full") return 620;
+  return 420;
 }
 
 function ImageGalleryPreview({ content }: { content: Record<string, any> }) {
   const images = content.images || [];
-  return <div className="grid gap-3">{content.title ? <strong className="text-sm">{content.title}</strong> : null}<div className="flex snap-x gap-3 overflow-x-auto rounded-md">{images.map((image: any, index: number) => <img key={`${image.url}-${index}`} src={resolveAsset(image.url)} alt={image.alt || ""} className={`min-w-full snap-center rounded-md border border-line object-contain ${imageGalleryClass(content.imageSize)}`} />)}</div></div>;
+  const frameClass = content.hasFrame === false ? "border-0 rounded-none" : "rounded-md border border-line bg-white p-2 shadow-sm";
+  return <div className="grid gap-3">{content.title ? <strong className="text-sm">{content.title}</strong> : null}<div className="flex snap-x gap-3 overflow-x-auto rounded-md">{images.map((image: any, index: number) => <img key={`${image.url}-${index}`} src={resolveAsset(image.url)} alt={image.alt || ""} style={{ maxHeight: `${imageHeightPx(content)}px` }} className={`min-w-full snap-center object-contain ${frameClass}`} />)}</div></div>;
 }
 
 function FlipCardsPreview({ content }: { content: Record<string, any> }) {

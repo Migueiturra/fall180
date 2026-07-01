@@ -364,8 +364,6 @@ h1 {
 }
 
 .image-gallery img {
-  border: 1px solid rgba(60, 60, 89, 0.12);
-  border-radius: 8px;
   display: block;
   min-width: 100%;
   object-fit: contain;
@@ -373,10 +371,19 @@ h1 {
   width: 100%;
 }
 
-.image-gallery-small img { max-height: 180px; }
-.image-gallery-medium img { max-height: 300px; }
-.image-gallery-large img { max-height: 440px; }
-.image-gallery-full img { max-height: none; }
+.image-gallery-frame img {
+  background: #fff;
+  border: 1px solid rgba(60, 60, 89, 0.12);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(24, 24, 51, 0.08);
+  padding: 8px;
+}
+
+.image-gallery-no-frame img {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+}
 
 .flip-card-grid {
   display: grid;
