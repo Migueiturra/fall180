@@ -243,17 +243,17 @@ function App() {
 
 function AppHeader({ section }: { section: "dashboard" | "editor" | "preview" }) {
   return (
-    <header className="sticky top-0 z-30 flex h-[76px] items-center justify-between border-b border-line bg-white/90 px-6 backdrop-blur-xl">
-      <a className="flex items-center gap-3 no-underline" href={appRoute("/courses.html")}>
-        <span className="grid size-5 place-items-center rounded-full bg-violet/20">
-          <span className="size-2 rounded-full bg-violet" />
+    <header className="sticky top-0 z-30 flex h-[56px] items-center border-b border-line bg-white/90 px-4 backdrop-blur-xl">
+      <a className="flex w-[220px] items-center gap-2 no-underline" href={appRoute("/courses.html")}>
+        <span className="grid size-4 place-items-center rounded-full bg-violet/20">
+          <span className="size-1.5 rounded-full bg-violet" />
         </span>
-        <strong className="text-lg text-ink">Fall 180</strong>
+        <strong className="text-base text-ink">Fall 180</strong>
       </a>
-      <nav className="flex items-center gap-6 text-sm font-extrabold text-ink">
-        <a className={section === "dashboard" ? "border-b-2 border-violet pb-2" : "pb-2"} href={appRoute("/courses.html")}>Dashboard</a>
-        <a className={section === "editor" ? "border-b-2 border-violet pb-2" : "pb-2"} href={appRoute("/")}>Editor</a>
-        <a className={section === "preview" ? "border-b-2 border-violet pb-2" : "pb-2"} href={`${appRoute("/preview.html")}?course=${getCourseId()}`}>Preview</a>
+      <nav className="hidden items-center gap-1 text-xs font-extrabold text-ink md:flex">
+        <a className={section === "dashboard" ? "rounded-md bg-mist px-2.5 py-2 text-violet" : "rounded-md px-2.5 py-2 hover:bg-mist"} href={appRoute("/courses.html")}>Dashboard</a>
+        <a className={section === "editor" ? "rounded-md bg-mist px-2.5 py-2 text-violet" : "rounded-md px-2.5 py-2 hover:bg-mist"} href={appRoute("/")}>Editor</a>
+        <a className={section === "preview" ? "rounded-md bg-mist px-2.5 py-2 text-violet" : "rounded-md px-2.5 py-2 hover:bg-mist"} href={`${appRoute("/preview.html")}?course=${getCourseId()}`}>Preview</a>
       </nav>
       <div className="flex items-center gap-2" id="header-actions" />
     </header>
@@ -452,32 +452,32 @@ function EditorApp() {
   return (
     <Tooltip.Provider>
       <AppHeader section="editor" />
-      <div className="fixed right-6 top-5 z-40 flex gap-2">
-        <span className="grid h-10 place-items-center rounded-full border border-line bg-white px-4 text-xs font-extrabold text-ink">{dirty ? "Sin guardar" : "Guardado"}</span>
+      <div className="fixed right-4 top-2.5 z-40 flex gap-1.5">
+        <span className="grid h-9 place-items-center rounded-full border border-line bg-white px-3 text-[11px] font-extrabold text-ink">{dirty ? "Sin guardar" : "Guardado"}</span>
         <CourseSettingsDialog course={course} onChange={updateCourse} />
-        <a className="grid h-10 place-items-center rounded-md border border-line bg-white px-4 text-sm font-extrabold" href={appRoute("/courses.html")}>Cursos</a>
-        <a className="grid h-10 place-items-center rounded-md border border-line bg-white px-4 text-sm font-extrabold" href={`${appRoute("/preview.html")}?course=${course.id}`}>Vista previa</a>
-        <button onClick={save} className="inline-flex h-10 items-center gap-2 rounded-md bg-mist px-4 text-sm font-extrabold"><Save size={16} /> Guardar</button>
-        <button onClick={exportScorm} className="inline-flex h-10 items-center gap-2 rounded-md bg-ink px-4 text-sm font-extrabold text-white"><Upload size={16} /> Exportar SCORM</button>
+        <a className="grid h-9 place-items-center rounded-md border border-line bg-white px-3 text-xs font-extrabold" href={appRoute("/courses.html")}>Cursos</a>
+        <a className="grid h-9 place-items-center rounded-md border border-line bg-white px-3 text-xs font-extrabold" href={`${appRoute("/preview.html")}?course=${course.id}`}>Vista previa</a>
+        <button onClick={save} className="inline-flex h-9 items-center gap-2 rounded-md bg-mist px-3 text-xs font-extrabold"><Save size={14} /> Guardar</button>
+        <button onClick={exportScorm} className="inline-flex h-9 items-center gap-2 rounded-md bg-ink px-3 text-xs font-extrabold text-white"><Upload size={14} /> Exportar SCORM</button>
       </div>
-      <main className="grid min-h-[calc(100vh-76px)] grid-cols-[320px_minmax(0,1fr)] gap-5 bg-[#f0f0f8] p-5">
-        <aside className="sticky top-[96px] flex h-[calc(100vh-116px)] flex-col overflow-hidden rounded-xl bg-white shadow-soft">
-          <section className="border-b border-line p-5">
-            <p className="text-xs font-black uppercase tracking-[0.12em] text-violet">Bloques</p>
-            <h2 className="mt-1 text-xl font-black tracking-[-0.03em] text-ink">Herramientas</h2>
-            <div className="mt-4 grid grid-cols-2 gap-1">
+      <main className="grid min-h-[calc(100vh-56px)] grid-cols-[280px_minmax(0,1fr)] gap-3 bg-[#f0f0f8] p-3">
+        <aside className="sticky top-[68px] flex h-[calc(100vh-80px)] flex-col overflow-hidden rounded-lg bg-white shadow-soft">
+          <section className="border-b border-line p-4">
+            <p className="text-[10px] font-black uppercase tracking-[0.12em] text-violet">Bloques</p>
+            <h2 className="mt-0.5 text-base font-black tracking-[-0.02em] text-ink">Herramientas</h2>
+            <div className="mt-3 grid grid-cols-2 gap-1">
               {blockTools.map((tool) => <SidebarToolButton key={tool.type} tool={tool} onAdd={addBlock} />)}
             </div>
           </section>
-          <section className="flex min-h-0 flex-1 flex-col p-5">
-            <div className="mb-4 flex items-center justify-between">
+          <section className="flex min-h-0 flex-1 flex-col p-4">
+            <div className="mb-3 flex items-center justify-between">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.12em] text-violet">Curso</p>
-                <h2 className="text-2xl font-black tracking-[-0.03em] text-ink">Unidades</h2>
+                <p className="text-[10px] font-black uppercase tracking-[0.12em] text-violet">Curso</p>
+                <h2 className="text-lg font-black tracking-[-0.02em] text-ink">Unidades</h2>
               </div>
-              <button className="rounded-md bg-mist px-3 py-2 text-sm font-extrabold" onClick={addLesson}>Agregar</button>
+              <button className="rounded-md bg-mist px-2.5 py-1.5 text-xs font-extrabold" onClick={addLesson}>Agregar</button>
             </div>
-            <div className="grid min-h-0 flex-1 gap-2 overflow-y-auto pr-1">
+            <div className="grid min-h-0 flex-1 auto-rows-min gap-1.5 overflow-y-auto pr-1">
               {course.lessons.map((item, index) => (
                 <LessonRow key={item.id} lesson={item} active={index === lessonIndex} onSelect={() => { setLessonIndex(index); setEditingBlockId(null); }} onMove={(direction) => updateCourse((draft) => moveLesson(draft.lessons, index, direction, setLessonIndex))} onDelete={() => updateCourse((draft) => {
                   if (draft.lessons.length <= 1) return;
@@ -488,15 +488,15 @@ function EditorApp() {
             </div>
           </section>
         </aside>
-        <section className="relative rounded-xl bg-white p-6 shadow-soft">
-          <div className="mb-7 flex items-start justify-between gap-6 border-b border-line pb-5">
+        <section className="relative rounded-lg bg-white p-4 shadow-soft">
+          <div className="mb-4 flex items-start justify-between gap-4 border-b border-line pb-3">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.12em] text-violet">Editor</p>
-              <input value={lesson.title} onChange={(event) => updateCourse((draft) => { draft.lessons[lessonIndex].title = event.target.value; })} className="mt-1 w-full border-0 bg-transparent text-2xl font-black tracking-[-0.03em] text-ink outline-none" />
+              <p className="text-[10px] font-black uppercase tracking-[0.12em] text-violet">Editor</p>
+              <input value={lesson.title} onChange={(event) => updateCourse((draft) => { draft.lessons[lessonIndex].title = event.target.value; })} className="mt-0.5 w-full border-0 bg-transparent text-lg font-black tracking-[-0.02em] text-ink outline-none" />
             </div>
-            <button onClick={() => setEditingBlockId(null)} className="rounded-md border border-line bg-white px-4 py-2 text-sm font-extrabold text-ink">Ver como queda</button>
+            <button onClick={() => setEditingBlockId(null)} className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-extrabold text-ink">Ver como queda</button>
           </div>
-          <div className="grid gap-4 pb-28">
+          <div className="grid gap-2.5 pb-20">
             {lesson.blocks.map((block, index) => (
               <BlockShell key={block.id} block={block} editing={block.id === editingBlockId} onEdit={() => setEditingBlockId(block.id)} onSave={async () => { await save(); setEditingBlockId(null); }} onMove={(direction) => updateCourse((draft) => moveItem(draft.lessons[lessonIndex].blocks, index, direction))} onDelete={() => updateCourse((draft) => {
                 draft.lessons[lessonIndex].blocks.splice(index, 1);
@@ -516,8 +516,8 @@ function CourseSettingsDialog({ course, onChange }: { course: Course; onChange: 
   return (
     <Dialog.Root>
       <Dialog.Trigger asChild>
-        <button className="inline-flex h-10 items-center gap-2 rounded-md border border-line bg-white px-4 text-sm font-extrabold">
-          <Settings size={16} /> Datos del curso
+        <button className="inline-flex h-9 items-center gap-1.5 rounded-md border border-line bg-white px-3 text-xs font-extrabold">
+          <Settings size={14} /> Datos del curso
         </button>
       </Dialog.Trigger>
       <Dialog.Portal>
@@ -545,8 +545,8 @@ function CourseSettingsDialog({ course, onChange }: { course: Course; onChange: 
 
 function SidebarToolButton({ tool, onAdd }: { tool: { type: BlockType; label: string; icon: React.ReactNode }; onAdd: (type: BlockType) => void }) {
   return (
-    <button onClick={() => onAdd(tool.type)} className="group flex h-10 min-w-0 items-center gap-2 rounded-md px-2 text-left text-xs font-extrabold text-ink transition hover:bg-mist">
-      <span className="grid size-7 shrink-0 place-items-center rounded-md bg-mist text-plum transition group-hover:bg-white group-hover:text-violet">{tool.icon}</span>
+    <button onClick={() => onAdd(tool.type)} className="group flex h-8 min-w-0 items-center gap-1.5 rounded-md px-1.5 text-left text-[11px] font-extrabold text-ink transition hover:bg-mist">
+      <span className="grid size-6 shrink-0 place-items-center rounded-md bg-mist text-plum transition group-hover:bg-white group-hover:text-violet">{tool.icon}</span>
       <span className="truncate">{tool.label}</span>
     </button>
   );
@@ -554,14 +554,14 @@ function SidebarToolButton({ tool, onAdd }: { tool: { type: BlockType; label: st
 
 function BottomBlockBar({ onAdd }: { onAdd: (type: BlockType) => void }) {
   return (
-    <div className="sticky bottom-4 z-20 mx-auto mt-8 max-w-4xl rounded-2xl border border-violet/20 bg-white/95 p-3 shadow-soft backdrop-blur-xl">
-      <div className="flex items-center gap-4">
-        <span className="hidden shrink-0 pl-2 text-xs font-black uppercase tracking-[0.12em] text-violet md:block">Agregar bloque</span>
-        <div className="flex flex-1 flex-wrap justify-center gap-1 md:justify-end">
+    <div className="sticky bottom-3 z-20 mx-auto mt-5 max-w-4xl rounded-xl border border-violet/20 bg-white/95 p-2 shadow-soft backdrop-blur-xl">
+      <div className="flex items-center gap-3">
+        <span className="hidden shrink-0 pl-2 text-[10px] font-black uppercase tracking-[0.12em] text-violet md:block">Agregar</span>
+        <div className="flex flex-1 flex-wrap justify-center gap-0.5 md:justify-end">
           {blockTools.map((tool) => (
             <Tooltip.Root key={tool.type}>
               <Tooltip.Trigger asChild>
-                <button aria-label={tool.label} onClick={() => onAdd(tool.type)} className="grid size-10 place-items-center rounded-md text-ink transition hover:bg-mist hover:text-violet">
+                <button aria-label={tool.label} onClick={() => onAdd(tool.type)} className="grid size-8 place-items-center rounded-md text-ink transition hover:bg-mist hover:text-violet">
                   {tool.icon}
                 </button>
               </Tooltip.Trigger>
@@ -578,12 +578,12 @@ function BottomBlockBar({ onAdd }: { onAdd: (type: BlockType) => void }) {
 
 function LessonRow({ lesson, active, onSelect, onMove, onDelete }: { lesson: Lesson; active: boolean; onSelect: () => void; onMove: (direction: number) => void; onDelete: () => void }) {
   return (
-    <article className={`grid grid-cols-[1fr_auto] items-center gap-2 rounded-lg border px-3 py-2 ${active ? "border-violet bg-mist" : "border-line bg-white"}`}>
-      <button onClick={onSelect} className="truncate text-left text-[15px] font-medium text-ink">{lesson.title}</button>
-      <div className="flex gap-1">
-        <IconButton label="Subir" onClick={() => onMove(-1)}><ArrowUp size={14} /></IconButton>
-        <IconButton label="Bajar" onClick={() => onMove(1)}><ArrowDown size={14} /></IconButton>
-        <IconButton label="Borrar" danger onClick={onDelete}><Trash2 size={14} /></IconButton>
+    <article className={`grid grid-cols-[1fr_auto] items-center gap-1.5 rounded-md border px-2.5 py-1.5 ${active ? "border-violet bg-mist" : "border-line bg-white"}`}>
+      <button onClick={onSelect} className="truncate text-left text-[13px] font-medium text-ink">{lesson.title}</button>
+      <div className="flex gap-0.5">
+        <IconButton label="Subir" onClick={() => onMove(-1)}><ArrowUp size={12} /></IconButton>
+        <IconButton label="Bajar" onClick={() => onMove(1)}><ArrowDown size={12} /></IconButton>
+        <IconButton label="Borrar" danger onClick={onDelete}><Trash2 size={12} /></IconButton>
       </div>
     </article>
   );
@@ -593,7 +593,7 @@ function IconButton({ label, onClick, children, danger = false }: { label: strin
   return (
     <Tooltip.Root>
       <Tooltip.Trigger asChild>
-        <button aria-label={label} onClick={onClick} className={`grid size-7 place-items-center rounded-md border border-transparent ${danger ? "text-red-600 hover:bg-red-50" : "text-steel hover:bg-white hover:text-ink"}`}>{children}</button>
+        <button aria-label={label} onClick={onClick} className={`grid size-6 place-items-center rounded-md border border-transparent ${danger ? "text-red-600 hover:bg-red-50" : "text-steel hover:bg-white hover:text-ink"}`}>{children}</button>
       </Tooltip.Trigger>
       <Tooltip.Portal><Tooltip.Content className="rounded bg-ink px-2 py-1 text-xs font-bold text-white">{label}</Tooltip.Content></Tooltip.Portal>
     </Tooltip.Root>
@@ -610,17 +610,17 @@ function TextField({ label, value, onChange, rows = 3 }: { label: string; value:
 
 function BlockShell({ block, editing, onEdit, onSave, onMove, onDelete, onChange }: { block: CourseBlock; editing: boolean; onEdit: () => void; onSave: () => void; onMove: (direction: number) => void; onDelete: () => void; onChange: (content: Record<string, any>) => void }) {
   return (
-    <article className={`grid grid-cols-[82px_minmax(0,1fr)_auto] overflow-hidden rounded-lg border ${editing ? "border-violet bg-white shadow-soft" : "border-line bg-white"}`}>
-      <button onClick={onEdit} className={`border-r border-line text-xs font-black ${editing ? "bg-mist text-ink" : "text-violet hover:bg-mist"}`}>Editar</button>
-      <div className="p-5">
+    <article className={`grid grid-cols-[64px_minmax(0,1fr)_auto] overflow-hidden rounded-md border ${editing ? "border-violet bg-white shadow-soft" : "border-line bg-white"}`}>
+      <button onClick={onEdit} className={`border-r border-line text-[11px] font-black ${editing ? "bg-mist text-ink" : "text-violet hover:bg-mist"}`}>Editar</button>
+      <div className="p-4">
         {editing ? <BlockForm block={block} onChange={onChange} /> : <BlockPreview block={block} />}
       </div>
-      <div className="flex items-center gap-1 p-4">
-        <IconButton label="Subir" onClick={() => onMove(-1)}><ArrowUp size={14} /></IconButton>
-        <IconButton label="Bajar" onClick={() => onMove(1)}><ArrowDown size={14} /></IconButton>
-        <IconButton label="Borrar" danger onClick={onDelete}><Trash2 size={14} /></IconButton>
+      <div className="flex items-center gap-0.5 p-3">
+        <IconButton label="Subir" onClick={() => onMove(-1)}><ArrowUp size={12} /></IconButton>
+        <IconButton label="Bajar" onClick={() => onMove(1)}><ArrowDown size={12} /></IconButton>
+        <IconButton label="Borrar" danger onClick={onDelete}><Trash2 size={12} /></IconButton>
       </div>
-      {editing ? <div className="col-span-3 flex justify-end border-t border-line p-4"><button onClick={onSave} className="inline-flex h-9 items-center gap-2 rounded-md bg-ink px-4 text-sm font-extrabold text-white"><Save size={15} /> Guardar bloque</button></div> : null}
+      {editing ? <div className="col-span-3 flex justify-end border-t border-line p-3"><button onClick={onSave} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-ink px-3 text-xs font-extrabold text-white"><Save size={13} /> Guardar bloque</button></div> : null}
     </article>
   );
 }
@@ -677,22 +677,22 @@ function QuizForm({ block, onChange }: { block: CourseBlock; onChange: (content:
 
 function BlockPreview({ block }: { block: CourseBlock }) {
   const c = block.content;
-  if (block.type === "heading") return <h3 className="text-3xl font-black tracking-[-0.04em]" dangerouslySetInnerHTML={{ __html: rich(c, "text") }} />;
-  if (block.type === "paragraph") return <div className="rich-output text-base leading-8 text-plum" dangerouslySetInnerHTML={{ __html: rich(c, "text") }} />;
-  if (block.type === "statement") return <div className="mx-auto grid max-w-2xl gap-6 text-center"><span className="mx-auto h-1 w-56 rounded-full bg-violet" /><div className="text-3xl leading-snug text-ink" dangerouslySetInnerHTML={{ __html: rich(c, "text") }} /></div>;
-  if (block.type === "image_text") return <div className="grid grid-cols-[140px_1fr] items-center gap-5 rounded-lg border border-line p-4"><img className="max-w-full" src={resolveAsset(c.imageUrl)} alt={c.imageAlt || ""} /><div><strong>{c.title}</strong><div className="rich-output mt-2" dangerouslySetInnerHTML={{ __html: rich(c, "text") }} /></div></div>;
+  if (block.type === "heading") return <h3 className="text-2xl font-black tracking-[-0.03em]" dangerouslySetInnerHTML={{ __html: rich(c, "text") }} />;
+  if (block.type === "paragraph") return <div className="rich-output text-sm leading-7 text-plum" dangerouslySetInnerHTML={{ __html: rich(c, "text") }} />;
+  if (block.type === "statement") return <div className="mx-auto grid max-w-2xl gap-4 text-center"><span className="mx-auto h-1 w-44 rounded-full bg-violet" /><div className="text-2xl leading-snug text-ink" dangerouslySetInnerHTML={{ __html: rich(c, "text") }} /></div>;
+  if (block.type === "image_text") return <div className="grid grid-cols-[110px_1fr] items-center gap-4 rounded-md border border-line p-3"><img className="max-w-full" src={resolveAsset(c.imageUrl)} alt={c.imageAlt || ""} /><div><strong className="text-sm">{c.title}</strong><div className="rich-output mt-1.5 text-sm" dangerouslySetInnerHTML={{ __html: rich(c, "text") }} /></div></div>;
   if (block.type === "embed") return <MediaBlock content={c} />;
-  if (block.type === "custom_html") return <iframe className="min-h-56 w-full rounded-lg border border-line" sandbox="allow-scripts allow-forms allow-popups" srcDoc={c.html || ""} />;
+  if (block.type === "custom_html") return <iframe className="min-h-48 w-full rounded-md border border-line" sandbox="allow-scripts allow-forms allow-popups" srcDoc={c.html || ""} />;
   if (block.type === "divider") return <hr className="border-line" />;
-  if (block.type === "continue_button") return <div className="rounded-lg border border-dashed border-violet/40 bg-mist p-5 text-center"><button className="rounded-md bg-ink px-5 py-3 font-extrabold text-white">{c.label || "Continuar"}</button></div>;
+  if (block.type === "continue_button") return <div className="rounded-md border border-dashed border-violet/40 bg-mist p-4 text-center"><button className="rounded-md bg-ink px-4 py-2 text-sm font-extrabold text-white">{c.label || "Continuar"}</button></div>;
   return <QuizPreview block={block} />;
 }
 
 function QuizPreview({ block }: { block: CourseBlock }) {
   const c = block.content;
-  if (block.type === "quiz_fill_blank") return <article className="rounded-lg border border-line p-5"><strong className="text-xl">{c.question}</strong><p className="mt-4 text-lg">{c.prompt}</p><input disabled className="mt-4 h-12 w-full rounded-md border border-line" /><button className="mt-5 rounded-md bg-mist px-5 py-3 font-extrabold">Revisar</button></article>;
-  if (block.type === "quiz_matching") return <article className="rounded-lg border border-line p-5"><strong className="text-xl">{c.question}</strong><div className="mt-4 grid max-w-3xl gap-3">{(c.pairs || []).map((pair: any, index: number) => <div className="grid grid-cols-[180px_1fr] items-center gap-4 rounded-md border border-violet/20 bg-[#fbfbff] p-4" key={index}><span className="font-bold">{pair.prompt}</span><select className="h-11 rounded-md border border-line px-3"><option>{pair.match}</option></select></div>)}</div><button className="mt-5 rounded-md bg-mist px-5 py-3 font-extrabold">Revisar</button></article>;
-  return <article className="rounded-lg border border-line p-5"><strong className="text-xl">{c.question}</strong><div className="mt-4 grid gap-3">{(c.options || []).map((option: string, index: number) => <label key={index} className="quiz-option grid grid-cols-[18px_1fr] items-center gap-3 rounded-md border border-violet/20 bg-[#fbfbff] p-4"><input type={block.type === "quiz_multiple_response" ? "checkbox" : "radio"} readOnly /><span className="font-semibold">{option}</span></label>)}</div><button className="mt-5 rounded-md bg-mist px-5 py-3 font-extrabold">Revisar</button></article>;
+  if (block.type === "quiz_fill_blank") return <article className="rounded-md border border-line p-4"><strong className="text-base">{c.question}</strong><p className="mt-3 text-sm">{c.prompt}</p><input disabled className="mt-3 h-9 w-full rounded-md border border-line" /><button className="mt-3 rounded-md bg-mist px-4 py-2 text-sm font-extrabold">Revisar</button></article>;
+  if (block.type === "quiz_matching") return <article className="rounded-md border border-line p-4"><strong className="text-base">{c.question}</strong><div className="mt-3 grid max-w-3xl gap-2">{(c.pairs || []).map((pair: any, index: number) => <div className="grid grid-cols-[150px_1fr] items-center gap-3 rounded-md border border-violet/20 bg-[#fbfbff] p-3" key={index}><span className="text-sm font-bold">{pair.prompt}</span><select className="h-9 rounded-md border border-line px-2 text-sm"><option>{pair.match}</option></select></div>)}</div><button className="mt-3 rounded-md bg-mist px-4 py-2 text-sm font-extrabold">Revisar</button></article>;
+  return <article className="rounded-md border border-line p-4"><strong className="text-base">{c.question}</strong><div className="mt-3 grid gap-2">{(c.options || []).map((option: string, index: number) => <label key={index} className="quiz-option grid grid-cols-[16px_1fr] items-center gap-2.5 rounded-md border border-violet/20 bg-[#fbfbff] p-3"><input type={block.type === "quiz_multiple_response" ? "checkbox" : "radio"} readOnly /><span className="text-sm font-semibold">{option}</span></label>)}</div><button className="mt-3 rounded-md bg-mist px-4 py-2 text-sm font-extrabold">Revisar</button></article>;
 }
 
 function PreviewApp() {
