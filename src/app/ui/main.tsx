@@ -353,7 +353,7 @@ function defaultBlock(type: BlockType): CourseBlock {
   if (type === "accordion") return { id: uid("b"), type, content: { title: "Acordeon", items: [{ title: "Pregunta o tema", text: "Contenido desplegable." }, { title: "Otro tema", text: "Mas informacion." }] } };
   if (type === "list") return { id: uid("b"), type, content: { title: "Lista", listStyle: "bullet", items: ["Primer punto", "Segundo punto", "Tercer punto"] } };
   if (type === "embed") return { id: uid("b"), type, content: { title: "Video o recurso embebido", url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", caption: "", size: "wide", aspectRatio: "16 / 9", hasFrame: true } };
-  if (type === "custom_html") return { id: uid("b"), type, content: { title: "Contenido HTML custom", html: "<div style='padding:24px;text-align:center'><h2>Bloque HTML</h2><p>Escribe tu codigo.</p></div>", size: "wide", aspectRatio: "16 / 9", hasFrame: true } };
+  if (type === "custom_html") return { id: uid("b"), type, content: { title: "Contenido HTML custom", html: "<div class='p-6 text-center'><h2 class='text-2xl font-bold'>Bloque HTML</h2><p class='mt-2'>Escribe tu codigo.</p></div>", size: "wide", aspectRatio: "16 / 9", hasFrame: true, htmlSizing: "auto", htmlHeight: 420, enableTailwind: true } };
   if (type === "quiz_single_choice") return { id: uid("b"), type, content: { question: "Escribe la pregunta", options: ["Alternativa correcta", "Alternativa incorrecta"], correctAnswer: 0, required: true, feedbackCorrect: "Correcto.", feedbackIncorrect: "Revisa la respuesta." } };
   if (type === "quiz_multiple_response") return { id: uid("b"), type, content: { question: "Selecciona todas las alternativas correctas", options: ["Respuesta correcta", "Otra respuesta correcta", "Distractor"], correctAnswers: [0, 1], required: true, feedbackCorrect: "Correcto.", feedbackIncorrect: "Revisa las alternativas." } };
   if (type === "quiz_fill_blank") return { id: uid("b"), type, content: { question: "Completa la frase", prompt: "La pieza que reconoce el LMS es el archivo ____.", answers: ["imsmanifest.xml"], caseSensitive: false, required: true, feedbackCorrect: "Correcto.", feedbackIncorrect: "Revisa la respuesta." } };
@@ -879,27 +879,40 @@ function RichTextarea({ label, value, onChange, rows = 4 }: { label: string; val
   }
 
   function command(name: string, commandValue?: string) {
-    restoreSelection();
     editorRef.current?.focus();
+    restoreSelection();
     document.execCommand(name, false, commandValue);
+    sync();
+  }
+
+  function applyInlineStyle(style: Partial<CSSStyleDeclaration>) {
+    const editor = editorRef.current;
+    const range = savedRangeRef.current;
+    if (!editor || !range || range.collapsed) return;
+    editor.focus();
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    const span = document.createElement("span");
+    Object.assign(span.style, style);
+    span.appendChild(range.extractContents());
+    range.insertNode(span);
+    const nextRange = document.createRange();
+    nextRange.selectNodeContents(span);
+    selection?.removeAllRanges();
+    selection?.addRange(nextRange);
+    savedRangeRef.current = nextRange.cloneRange();
     sync();
   }
 
   function applySize(nextSize: string) {
     setSize(nextSize);
-    command("fontSize", "7");
-    editorRef.current?.querySelectorAll("font[size='7']").forEach((node) => {
-      const span = document.createElement("span");
-      span.style.fontSize = `${Number(nextSize) || 16}px`;
-      span.innerHTML = node.innerHTML;
-      node.replaceWith(span);
-    });
-    sync();
+    applyInlineStyle({ fontSize: `${Number(nextSize) || 16}px` });
   }
 
   function applyColor(nextColor: string) {
     setHex(nextColor);
-    if (/^#[0-9a-fA-F]{6}$/.test(nextColor)) command("foreColor", nextColor);
+    if (/^#[0-9a-fA-F]{6}$/.test(nextColor)) applyInlineStyle({ color: nextColor });
   }
 
   return (
@@ -934,7 +947,7 @@ function BlockForm({ block, onChange }: { block: CourseBlock; onChange: (content
   if (block.type === "accordion") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} />{(c.items || []).map((item: any, index: number) => <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2"><Field label={`Item ${index + 1}`} value={item.title || ""} onChange={(value) => { const items = [...(c.items || [])]; items[index] = { ...item, title: value }; patch({ items }); }} /><Field label="Texto" value={item.text || ""} onChange={(value) => { const items = [...(c.items || [])]; items[index] = { ...item, text: value }; patch({ items }); }} /><button className="mt-6 grid size-10 place-items-center rounded-md text-red-600 hover:bg-red-50" onClick={() => patch({ items: (c.items || []).filter((_: any, i: number) => i !== index) })}><Trash2 size={15} /></button></div>)}<button className="w-fit rounded-md bg-mist px-3 py-2 text-sm font-extrabold" onClick={() => patch({ items: [...(c.items || []), { title: "Nuevo item", text: "Contenido" }] })}>Agregar item</button></div>;
   if (block.type === "list") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} /><SelectField label="Tipo" value={c.listStyle || "bullet"} onChange={(value) => patch({ listStyle: value })} options={[["bullet", "Puntos"], ["number", "1, 2, 3"]]} /><TextField label="Items, uno por linea" value={(c.items || []).join("\n")} onChange={(value) => patch({ items: linesToItems(value) })} rows={6} /></div>;
   if (block.type === "embed") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} /><Field label="URL" value={c.url || ""} onChange={(value) => patch({ url: value })} /><Field label="Bajada" value={c.caption || ""} onChange={(value) => patch({ caption: value })} /></div>;
-  if (block.type === "custom_html") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} /><TextField label="Codigo HTML" value={c.html || ""} onChange={(value) => patch({ html: value })} rows={9} /></div>;
+  if (block.type === "custom_html") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} /><TextField label="Codigo HTML" value={c.html || ""} onChange={(value) => patch({ html: value })} rows={9} /><SelectField label="Alto" value={c.htmlSizing || "auto"} onChange={(value) => patch({ htmlSizing: value })} options={[["auto", "Segun contenido"], ["fixed", "Fijo en px"]]} /><Field label="Alto fijo px" type="number" value={String(Number(c.htmlHeight) || 420)} onChange={(value) => patch({ htmlHeight: Number(value) || 420 })} /><SelectField label="Marco" value={c.hasFrame === false ? "no" : "yes"} onChange={(value) => patch({ hasFrame: value === "yes" })} options={[["yes", "Con marco"], ["no", "Sin marco"]]} /><SelectField label="Tailwind / HyperUI" value={c.enableTailwind === false ? "no" : "yes"} onChange={(value) => patch({ enableTailwind: value === "yes" })} options={[["yes", "Activado"], ["no", "Desactivado"]]} /></div>;
   if (block.type === "continue_button") return <div className="grid gap-4"><Field label="Texto del boton" value={c.label || "Continuar"} onChange={(value) => patch({ label: value })} /><SelectField label="Tamano boton" value={c.buttonSize || "medium"} onChange={(value) => patch({ buttonSize: value })} options={[["small", "Pequeno"], ["medium", "Mediano"], ["full", "Grande / ancho completo"]]} /><HexColorField label="Color" value={c.buttonColor || "#181833"} onChange={(value) => patch({ buttonColor: value })} /></div>;
   if (block.type === "divider") return <p className="text-sm font-bold text-steel">Este bloque no necesita configuracion.</p>;
   return <QuizForm block={block} onChange={onChange} />;
@@ -1002,7 +1015,7 @@ function BlockPreview({ block, onQuizStatusChange }: { block: CourseBlock; onQui
   if (block.type === "accordion") return <AccordionPreview content={c} />;
   if (block.type === "list") return <ListPreview content={c} />;
   if (block.type === "embed") return <MediaBlock content={c} />;
-  if (block.type === "custom_html") return <iframe className="min-h-48 w-full rounded-md border border-line" sandbox="allow-scripts allow-forms allow-popups" srcDoc={c.html || ""} />;
+  if (block.type === "custom_html") return <CustomHtmlFrame content={c} />;
   if (block.type === "divider") return <hr className="border-line" />;
   if (block.type === "continue_button") return <ContinueButtonPreview content={c} />;
   return <QuizPreview block={block} onStatusChange={onQuizStatusChange} />;
@@ -1044,6 +1057,68 @@ function continueButtonClass(size = "medium") {
 function ContinueButtonPreview({ content, disabled = false, onClick }: { content: Record<string, any>; disabled?: boolean; onClick?: () => void }) {
   const color = /^#[0-9a-fA-F]{6}$/.test(content.buttonColor || "") ? content.buttonColor : "#181833";
   return <div className="py-3 text-center"><button disabled={disabled} onClick={onClick} style={{ backgroundColor: color }} className={`rounded-md py-2.5 text-sm font-extrabold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-50 ${continueButtonClass(content.buttonSize)}`}>{content.label || "Continuar"}</button></div>;
+}
+
+function customHtmlSrcDoc(content: Record<string, any>, frameId: string) {
+  const tailwind = content.enableTailwind === false ? "" : '<script src="https://cdn.tailwindcss.com"></script>';
+  return `<!doctype html>
+<html>
+<head>
+  <base target="_blank">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  ${tailwind}
+  <style>
+    html,body{margin:0;min-height:0;background:transparent;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+    *,*::before,*::after{box-sizing:border-box}
+  </style>
+</head>
+<body>
+${content.html || ""}
+<script>
+  const sendHeight = () => parent.postMessage({ type: "pulsestudio-html-height", id: "${frameId}", height: Math.max(document.body.scrollHeight, document.documentElement.scrollHeight) }, "*");
+  window.addEventListener("load", sendHeight);
+  new ResizeObserver(sendHeight).observe(document.body);
+  document.addEventListener("click", (event) => {
+    const link = event.target.closest && event.target.closest("a");
+    if (!link) return;
+    const href = link.getAttribute("href") || "";
+    if (href === "#" || href.startsWith("#")) event.preventDefault();
+  });
+  setTimeout(sendHeight, 200);
+  setTimeout(sendHeight, 800);
+</script>
+</body>
+</html>`;
+}
+
+function CustomHtmlFrame({ content }: { content: Record<string, any> }) {
+  const frameId = useMemo(() => uid("html-frame"), []);
+  const [height, setHeight] = useState(Number(content.htmlHeight) || 420);
+  const fixed = content.htmlSizing === "fixed";
+
+  useEffect(() => {
+    if (fixed) {
+      setHeight(Number(content.htmlHeight) || 420);
+      return;
+    }
+    function onMessage(event: MessageEvent) {
+      if (event.data?.type !== "pulsestudio-html-height" || event.data.id !== frameId) return;
+      setHeight(Math.max(120, Math.min(Number(event.data.height) || 420, 2400)));
+    }
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [content.htmlHeight, fixed, frameId]);
+
+  return (
+    <iframe
+      className={`w-full overflow-hidden bg-white ${content.hasFrame === false ? "border-0 rounded-none" : "rounded-md border border-line shadow-sm"}`}
+      sandbox="allow-scripts allow-forms allow-popups"
+      srcDoc={customHtmlSrcDoc(content, frameId)}
+      style={{ height: `${fixed ? Number(content.htmlHeight) || 420 : height}px` }}
+      title={content.title || "HTML custom"}
+    />
+  );
 }
 
 function QuizPreview({ block, onStatusChange }: { block: CourseBlock; onStatusChange?: (blockId: string, correct: boolean) => void }) {

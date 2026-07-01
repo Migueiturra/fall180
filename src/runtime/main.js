@@ -103,6 +103,23 @@
     return "aspect-ratio: " + escapeHtml(content.aspectRatio || "16 / 9");
   }
 
+  window.addEventListener("message", function (event) {
+    if (!event.data || event.data.type !== "pulsestudio-html-height") return;
+    var frame = document.querySelector('[data-html-frame="' + String(event.data.id).replace(/"/g, "") + '"]');
+    if (!frame || frame.dataset.sizing === "fixed") return;
+    frame.style.height = Math.max(120, Math.min(Number(event.data.height) || 420, 2400)) + "px";
+  });
+
+  function customHtmlSrcDoc(content, frameId) {
+    var tailwind = content.enableTailwind === false ? "" : '<script src="https://cdn.tailwindcss.com"><\\/script>';
+    return '<!doctype html><html><head><base target="_blank"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">' +
+      tailwind +
+      '<style>html,body{margin:0;min-height:0;background:transparent;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}*,*::before,*::after{box-sizing:border-box}</style>' +
+      '</head><body>' + (content.html || "") +
+      '<script>const sendHeight=()=>parent.postMessage({type:"pulsestudio-html-height",id:"' + escapeHtml(frameId) + '",height:Math.max(document.body.scrollHeight,document.documentElement.scrollHeight)},"*");window.addEventListener("load",sendHeight);new ResizeObserver(sendHeight).observe(document.body);document.addEventListener("click",(event)=>{const link=event.target.closest&&event.target.closest("a");if(!link)return;const href=link.getAttribute("href")||"";if(href==="#"||href.startsWith("#"))event.preventDefault();});setTimeout(sendHeight,200);setTimeout(sendHeight,800);<\\/script>' +
+      '</body></html>';
+  }
+
   function currentLesson() {
     return state.course.lessons[state.currentLessonIndex];
   }
@@ -343,9 +360,12 @@
     }
 
     if (block.type === "custom_html") {
+      var frameId = "html-" + block.id;
+      var fixed = block.content.htmlSizing === "fixed";
+      var htmlHeight = Number(block.content.htmlHeight) || 420;
       return '<article class="block ' + mediaClass(block.content) + ' reveal-block">' +
         (block.content.title ? '<strong class="media-title">' + escapeHtml(block.content.title) + '</strong>' : '') +
-        '<iframe class="custom-html-frame" title="' + escapeHtml(block.content.title || "HTML custom") + '" sandbox="allow-scripts allow-forms allow-popups" srcdoc="' + escapeHtml(block.content.html || "") + '" style="' + aspectStyle(block.content) + '"></iframe>' +
+        '<iframe class="custom-html-frame" title="' + escapeHtml(block.content.title || "HTML custom") + '" sandbox="allow-scripts allow-forms allow-popups" data-html-frame="' + escapeHtml(frameId) + '" data-sizing="' + (fixed ? "fixed" : "auto") + '" srcdoc="' + escapeHtml(customHtmlSrcDoc(block.content, frameId)) + '" style="height:' + htmlHeight + 'px"></iframe>' +
         '</article>';
     }
 

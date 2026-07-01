@@ -450,7 +450,7 @@ h1 {
 
 .media-shell,
 .custom-html-frame {
-  background: #181833;
+  background: #fff;
   border: 0;
   border-radius: 8px;
   display: block;
@@ -463,6 +463,10 @@ h1 {
   border: 1px solid rgba(60, 60, 89, 0.12);
   box-shadow: 0 8px 24px rgba(24, 24, 51, 0.08);
   padding: 8px;
+}
+
+.media-with-frame .custom-html-frame {
+  padding: 0;
 }
 
 .media-no-frame .media-shell,
@@ -481,6 +485,7 @@ h1 {
 
 .custom-html-frame {
   min-height: 220px;
+  transition: height 180ms ease;
 }
 
 .media-caption {
