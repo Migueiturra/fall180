@@ -590,10 +590,12 @@ function EditorApp() {
     if (result.ok) window.location.href = result.zipUrl;
   }
 
-  function addBlock(type: BlockType) {
+  function addBlock(type: BlockType, insertIndex?: number) {
     updateCourse((draft) => {
       const block = defaultBlock(type);
-      draft.lessons[lessonIndex].blocks.push(block);
+      const blocks = draft.lessons[lessonIndex].blocks;
+      if (typeof insertIndex === "number") blocks.splice(insertIndex, 0, block);
+      else blocks.push(block);
       setEditingBlockId(block.id);
     });
   }
@@ -658,14 +660,17 @@ function EditorApp() {
           </div>
           <div className="grid gap-2.5 pb-20">
             {lesson.blocks.map((block, index) => (
-              <BlockShell key={block.id} block={block} editing={block.id === editingBlockId} onEdit={() => setEditingBlockId(block.id)} onSave={async () => { await save(); setEditingBlockId(null); }} onDuplicate={() => updateCourse((draft) => {
-                const copy = duplicateBlock(block);
-                draft.lessons[lessonIndex].blocks.splice(index + 1, 0, copy);
-                setEditingBlockId(copy.id);
-              })} onMove={(direction) => updateCourse((draft) => moveItem(draft.lessons[lessonIndex].blocks, index, direction))} onDelete={() => updateCourse((draft) => {
-                draft.lessons[lessonIndex].blocks.splice(index, 1);
-                setEditingBlockId(null);
-              })} onChange={(content) => updateCourse((draft) => { draft.lessons[lessonIndex].blocks[index].content = content; })} />
+              <React.Fragment key={block.id}>
+                {index > 0 ? <InlineInsertBlockBar onAdd={(type) => addBlock(type, index)} /> : null}
+                <BlockShell block={block} editing={block.id === editingBlockId} onEdit={() => setEditingBlockId(block.id)} onSave={async () => { await save(); setEditingBlockId(null); }} onDuplicate={() => updateCourse((draft) => {
+                  const copy = duplicateBlock(block);
+                  draft.lessons[lessonIndex].blocks.splice(index + 1, 0, copy);
+                  setEditingBlockId(copy.id);
+                })} onMove={(direction) => updateCourse((draft) => moveItem(draft.lessons[lessonIndex].blocks, index, direction))} onDelete={() => updateCourse((draft) => {
+                  draft.lessons[lessonIndex].blocks.splice(index, 1);
+                  setEditingBlockId(null);
+                })} onChange={(content) => updateCourse((draft) => { draft.lessons[lessonIndex].blocks[index].content = content; })} />
+              </React.Fragment>
             ))}
           </div>
           <BottomBlockBar onAdd={addBlock} />
@@ -728,6 +733,45 @@ function SidebarToolGroup({ group, onAdd }: { group: { title: string; tools: Blo
         {group.tools.map((type) => <SidebarToolButton key={type} tool={blockToolByType(type)} onAdd={onAdd} />)}
       </div>
     </details>
+  );
+}
+
+function InlineInsertBlockBar({ onAdd }: { onAdd: (type: BlockType) => void }) {
+  const [open, setOpen] = useState(false);
+
+  function add(type: BlockType) {
+    onAdd(type);
+    setOpen(false);
+  }
+
+  return (
+    <div className="group relative -my-1 grid min-h-7 place-items-center">
+      <div className="absolute left-0 right-0 top-1/2 h-px -translate-y-1/2 bg-line opacity-0 transition group-hover:opacity-100" />
+      <button
+        type="button"
+        aria-label="Agregar bloque aqui"
+        onClick={() => setOpen((current) => !current)}
+        className={`relative z-10 grid size-6 place-items-center rounded-full border border-line bg-white text-violet shadow-sm transition hover:border-violet hover:bg-mist ${open ? "scale-100 opacity-100" : "scale-95 opacity-0 group-hover:scale-100 group-hover:opacity-100"}`}
+      >
+        <Plus size={14} />
+      </button>
+      {open ? (
+        <div className="relative z-20 mt-1 flex max-w-[min(760px,calc(100vw-320px))] flex-wrap items-center justify-center gap-1 rounded-xl border border-violet/20 bg-white/95 px-2 py-1.5 shadow-soft backdrop-blur-xl">
+          {blockTools.map((tool) => (
+            <Tooltip.Root key={tool.type}>
+              <Tooltip.Trigger asChild>
+                <button type="button" aria-label={tool.label} onClick={() => add(tool.type)} className="grid size-8 place-items-center rounded-md text-ink transition hover:bg-mist hover:text-violet">
+                  {tool.icon}
+                </button>
+              </Tooltip.Trigger>
+              <Tooltip.Portal>
+                <Tooltip.Content className="rounded bg-ink px-2 py-1 text-xs font-bold text-white" sideOffset={8}>{tool.label}</Tooltip.Content>
+              </Tooltip.Portal>
+            </Tooltip.Root>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
