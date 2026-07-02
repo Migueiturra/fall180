@@ -263,9 +263,9 @@ function themeFontFamily(fontFamily: string) {
 }
 
 function themeFontWeights(fontWeight: string) {
-  if (fontWeight === "light") return { body: "420", strong: "620", heading: "720" };
-  if (fontWeight === "heavy") return { body: "720", strong: "840", heading: "900" };
-  return { body: "620", strong: "760", heading: "850" };
+  if (fontWeight === "light") return { body: "360", strong: "520", heading: "620" };
+  if (fontWeight === "heavy") return { body: "560", strong: "720", heading: "820" };
+  return { body: "400", strong: "580", heading: "700" };
 }
 
 function courseThemeStyle(course: Course): React.CSSProperties {
@@ -1371,7 +1371,7 @@ function EditorApp() {
         <button onClick={save} className="inline-flex h-9 items-center gap-2 rounded-md bg-mist px-3 text-xs font-extrabold"><Save size={14} /> Guardar</button>
         <button onClick={exportScorm} className="inline-flex h-9 items-center gap-2 rounded-md bg-ink px-3 text-xs font-extrabold text-white"><Upload size={14} /> Exportar SCORM</button>
       </div>
-      <main className="grid min-h-[calc(100vh-56px)] grid-cols-[220px_minmax(0,1fr)] gap-3 bg-[#f0f0f8] p-3">
+      <main className="course-theme-scope grid min-h-[calc(100vh-56px)] grid-cols-[220px_minmax(0,1fr)] gap-3 bg-[#f0f0f8] p-3" style={courseThemeStyle(course)}>
         <aside className="sticky top-[68px] flex h-[calc(100vh-80px)] flex-col overflow-hidden rounded-lg bg-white shadow-soft">
           <section className="border-b border-line p-3">
             <p className="text-[10px] font-black uppercase tracking-[0.12em] text-violet">Bloques</p>
@@ -2046,9 +2046,9 @@ function QuizForm({ block, onChange }: { block: CourseBlock; onChange: (content:
 
 function BlockPreview({ block, onQuizStatusChange }: { block: CourseBlock; onQuizStatusChange?: (blockId: string, correct: boolean) => void }) {
   const c = block.content;
-  if (block.type === "heading") return <h3 className="text-2xl font-black tracking-[-0.03em]" dangerouslySetInnerHTML={{ __html: rich(c, "text") }} />;
+  if (block.type === "heading") return <h3 className="text-2xl tracking-[-0.02em]" dangerouslySetInnerHTML={{ __html: rich(c, "text") }} />;
   if (block.type === "paragraph") return <div className="rich-output text-sm leading-7 text-plum" dangerouslySetInnerHTML={{ __html: rich(c, "text") }} />;
-  if (block.type === "statement") return <div className="mx-auto grid max-w-2xl gap-4 text-center"><span className="mx-auto h-1 w-44 rounded-full bg-violet" /><div className="text-2xl leading-snug text-ink" dangerouslySetInnerHTML={{ __html: rich(c, "text") }} /></div>;
+  if (block.type === "statement") return <div className="mx-auto grid max-w-2xl gap-4 text-center"><span className="mx-auto h-1 w-44 rounded-full" style={{ backgroundColor: "var(--ps-primary, #8182F2)" }} /><div className="statement-block text-2xl leading-snug text-ink" dangerouslySetInnerHTML={{ __html: rich(c, "text") }} /></div>;
   if (block.type === "image_text") return <div className="grid grid-cols-[auto_1fr] items-center gap-4 rounded-md border border-line p-3"><img className="max-w-full" style={{ width: `${Number(c.imageSize) || 180}px` }} src={resolveAsset(c.imageUrl)} alt={c.imageAlt || ""} /><div><strong className="text-sm">{c.title}</strong><div className="rich-output mt-1.5 text-sm" dangerouslySetInnerHTML={{ __html: rich(c, "text") }} /></div></div>;
   if (block.type === "image_gallery") return <ImageGalleryPreview content={c} />;
   if (block.type === "flip_cards") return <FlipCardsPreview content={c} />;
@@ -2190,7 +2190,7 @@ function TabsPreview({ content }: { content: Record<string, any> }) {
       <div className="overflow-hidden rounded-md border border-line bg-white shadow-sm">
         <div className="flex overflow-x-auto" style={{ background: tabBackground }}>
           {items.map((item: any, index: number) => (
-            <button key={index} type="button" onClick={() => setActive(index)} className="min-h-12 min-w-[180px] flex-1 border-r border-line bg-transparent px-4 py-3 text-center text-xs font-black uppercase tracking-[0.12em] text-ink last:border-r-0" style={{ color: index === active ? accent : "#181833", background: index === active ? panelBackground : tabBackground }}>
+            <button key={index} type="button" onClick={() => setActive(index)} className="min-h-12 min-w-[180px] flex-1 border-r border-line bg-transparent px-4 py-3 text-center text-xs uppercase tracking-[0.1em] text-ink last:border-r-0" style={{ color: index === active ? accent : "var(--ps-ink, #181833)", background: index === active ? panelBackground : tabBackground }}>
               {item.label || `Tab ${index + 1}`}
             </button>
           ))}
@@ -2202,7 +2202,7 @@ function TabsPreview({ content }: { content: Record<string, any> }) {
 }
 
 function AccordionPreview({ content }: { content: Record<string, any> }) {
-  return <div className="grid gap-2">{content.title ? <strong className="text-sm" style={{ color: "var(--ps-accent, #3C3C59)" }}>{content.title}</strong> : null}{(content.items || []).map((item: any, index: number) => <details key={index} className="rounded-md border bg-white p-3" style={{ borderColor: "color-mix(in srgb, var(--ps-primary, #8182F2) 28%, #dedff2)" }}><summary className="cursor-pointer text-sm font-black" style={{ color: "var(--ps-ink, #181833)" }}>{item.title}</summary><p className="mt-2 text-sm leading-6" style={{ color: "var(--ps-accent, #3C3C59)" }}>{item.text}</p></details>)}</div>;
+  return <div className="grid gap-2">{content.title ? <strong className="text-sm" style={{ color: "var(--ps-accent, #3C3C59)" }}>{content.title}</strong> : null}{(content.items || []).map((item: any, index: number) => <details key={index} className="rounded-md border bg-white p-3" style={{ borderColor: "color-mix(in srgb, var(--ps-primary, #8182F2) 28%, #dedff2)" }}><summary className="cursor-pointer text-sm leading-6" style={{ color: "var(--ps-ink, #181833)" }}>{item.title}</summary><p className="mt-2 text-sm leading-6" style={{ color: "var(--ps-accent, #3C3C59)" }}>{item.text}</p></details>)}</div>;
 }
 
 function ListPreview({ content }: { content: Record<string, any> }) {

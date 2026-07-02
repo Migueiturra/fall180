@@ -50,14 +50,14 @@ details[open] .details-chevron {
 .course-theme-scope label,
 .course-theme-scope input,
 .course-theme-scope select {
-  font-weight: var(--ps-weight-body, 620);
+  font-weight: var(--ps-weight-body, 400);
 }
 
 .course-theme-scope button,
 .course-theme-scope strong,
 .course-theme-scope .quiz-option,
 .course-theme-scope .flip-card-face {
-  font-weight: var(--ps-weight-strong, 760);
+  font-weight: var(--ps-weight-strong, 580);
 }
 
 .course-theme-scope h1,
@@ -65,7 +65,7 @@ details[open] .details-chevron {
 .course-theme-scope h3,
 .course-theme-scope summary,
 .course-theme-scope .statement-block {
-  font-weight: var(--ps-weight-heading, 850) !important;
+  font-weight: var(--ps-weight-heading, 700);
 }
 
 .rich-output p,
