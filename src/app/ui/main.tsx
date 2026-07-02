@@ -946,6 +946,7 @@ function DashboardApp() {
   const [deleteTarget, setDeleteTarget] = useState<CourseSummary | null>(null);
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState("");
+  const [dashboardError, setDashboardError] = useState("");
   const csvInputRef = useRef<HTMLInputElement | null>(null);
 
   async function load() {
@@ -953,6 +954,7 @@ function DashboardApp() {
   }
 
   async function createCourse() {
+    setDashboardError("");
     const course = await createCourseRecord();
     window.location.href = `${appRoute("/")}?course=${encodeURIComponent(course.id)}`;
   }
@@ -977,14 +979,17 @@ function DashboardApp() {
 
   async function deleteCourse() {
     if (!deleteTarget) return;
+    setDashboardError("");
     if (isSupabaseConfigured) {
       try {
         await deleteSupabaseCourse(deleteTarget.id);
+        setCourses((current) => current.filter((course) => course.id !== deleteTarget.id));
         setDeleteTarget(null);
-        load();
         return;
-      } catch {
-        // Use the previous delete path when Supabase is not reachable.
+      } catch (error) {
+        setDashboardError(error instanceof Error ? error.message : "No se pudo eliminar el curso en Supabase.");
+        setDeleteTarget(null);
+        return;
       }
     }
 
@@ -997,8 +1002,8 @@ function DashboardApp() {
     const response = await fetch(`/api/courses/${encodeURIComponent(deleteTarget.id)}`, { method: "DELETE" });
     const result = await response.json();
     if (result.ok) {
+      setCourses((current) => current.filter((course) => course.id !== deleteTarget.id));
       setDeleteTarget(null);
-      load();
     }
   }
 
@@ -1040,7 +1045,7 @@ function DashboardApp() {
             <select className="h-11 rounded-md border border-line px-3 text-sm font-semibold"><option>Recientes</option><option>Titulo</option></select>
             <select className="h-11 rounded-md border border-line px-3 text-sm font-semibold"><option>Todos</option><option>Cursos</option></select>
           </div>
-          {importError ? <div className="mb-5 rounded-md border border-red-100 bg-red-50 p-3 text-sm font-bold text-red-700">{importError}</div> : null}
+          {importError || dashboardError ? <div className="mb-5 rounded-md border border-red-100 bg-red-50 p-3 text-sm font-bold text-red-700">{importError || dashboardError}</div> : null}
           <div className="grid grid-cols-[repeat(auto-fill,minmax(190px,220px))] gap-4">
             {filtered.map((course, index) => (
               <CourseCard key={course.id} course={course} index={index} onDelete={() => setDeleteTarget(course)} />

@@ -242,12 +242,14 @@ export async function saveSupabaseCourse(course: Course): Promise<void> {
 export async function deleteSupabaseCourse(id: string): Promise<void> {
   if (!supabase) throw new Error("Supabase no esta configurado.");
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("courses")
     .delete()
-    .eq("id", id);
+    .eq("id", id)
+    .select("id");
 
   if (error) throw error;
+  if (!data?.length) throw new Error("No se pudo eliminar el curso. Puede que no tengas permisos sobre este curso.");
 }
 
 export async function uploadSupabaseAsset(file: File): Promise<string> {
