@@ -213,6 +213,7 @@ export async function loadSupabaseCourse(id: string): Promise<Course | null> {
 
 export async function createSupabaseCourse(course: Course): Promise<CourseSummary> {
   if (!supabase) throw new Error("Supabase no esta configurado.");
+  await loadCurrentProfile();
   const ownerId = await currentUserId();
   if (!ownerId) throw new Error("Debes iniciar sesion para crear cursos.");
 
@@ -228,13 +229,36 @@ export async function createSupabaseCourse(course: Course): Promise<CourseSummar
 
 export async function saveSupabaseCourse(course: Course): Promise<void> {
   if (!supabase) throw new Error("Supabase no esta configurado.");
+  await loadCurrentProfile();
   const userId = await currentUserId();
   const ownerId = typeof course.metadata?.ownerId === "string" ? course.metadata.ownerId : userId;
   if (!userId || !ownerId) throw new Error("Debes iniciar sesion para guardar cursos.");
 
+  const { data: existing, error: findError } = await supabase
+    .from("courses")
+    .select("id,owner_id")
+    .eq("id", course.id)
+    .maybeSingle();
+
+  if (findError) throw findError;
+
+  if (existing) {
+    const currentOwnerId = existing.owner_id || ownerId;
+    const { data, error } = await supabase
+      .from("courses")
+      .update(coursePayload(course, currentOwnerId))
+      .eq("id", course.id)
+      .select("id")
+      .single();
+
+    if (error) throw error;
+    if (!data) throw new Error("No se pudo guardar el curso. Revisa los permisos del propietario.");
+    return;
+  }
+
   const { error } = await supabase
     .from("courses")
-    .upsert(coursePayload(course, ownerId), { onConflict: "id" });
+    .insert(coursePayload(course, ownerId));
 
   if (error) throw error;
 }

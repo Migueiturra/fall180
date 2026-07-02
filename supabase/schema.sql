@@ -73,6 +73,10 @@ create index if not exists courses_updated_at_idx on public.courses(updated_at d
 alter table public.profiles enable row level security;
 alter table public.courses enable row level security;
 
+grant usage on schema public to anon, authenticated;
+grant select, insert, update on public.profiles to authenticated;
+grant select, insert, update, delete on public.courses to authenticated;
+
 drop policy if exists "Profiles are readable by owner or admins" on public.profiles;
 drop policy if exists "Users can insert own profile" on public.profiles;
 drop policy if exists "Users can update own basic profile" on public.profiles;

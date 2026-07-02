@@ -107,6 +107,13 @@ type CourseBlock = {
   content: Record<string, any>;
 };
 
+type CsvImportDetails = {
+  title: string;
+  description: string;
+  durationMinutes: number;
+  passingScore: number;
+};
+
 const colors = ["#181833", "#3C3C59", "#7A7A8C", "#8C8CBF", "#8182F2", "#2F6FED", "#119C8D", "#D14D3F", "#F2A93B"];
 const demoCourse = demoCourseData as Course;
 const staticCoursesKey = "fall180-static-courses";
@@ -119,6 +126,24 @@ const defaultTheme = {
   fontFamily: "inter",
   fontWeight: "normal"
 };
+
+const csvTemplate = `curso,descripcion_curso,unidad,orden,tipo,titulo,contenido,opciones,respuesta_correcta,obligatorio,imagen,extra,padding,ancho,alinear,color_fondo
+Gestion emocional en el trabajo,Curso breve para practicar regulacion emocional,Bienvenida,1,titulo,,Gestion emocional en el trabajo,,,,,,mediano,m,izquierda,
+Gestion emocional en el trabajo,Curso breve para practicar regulacion emocional,Bienvenida,2,parrafo,,Aprenderas a reconocer emociones y responder con mayor claridad.,,,,,,mediano,m,izquierda,
+Gestion emocional en el trabajo,Curso breve para practicar regulacion emocional,Bienvenida,3,statement,,Entre lo que sentimos y lo que hacemos puede existir una pausa.,,,,,,grande,m,centro,#F6F6FF
+Gestion emocional en el trabajo,Curso breve para practicar regulacion emocional,Modulo 1,1,lista,Ideas clave,,Reconocer senales|Pausar|Elegir una respuesta,,,,,mediano,m,izquierda,
+Gestion emocional en el trabajo,Curso breve para practicar regulacion emocional,Modulo 1,2,tarjetas,Tarjetas de practica,,Reconocer=>Nombrar lo que ocurre|Regular=>Elegir una respuesta mas util|Pedir apoyo=>Activar una red segura,,,,,mediano,l,centro,
+Gestion emocional en el trabajo,Curso breve para practicar regulacion emocional,Modulo 1,3,tabs,Estrategias,,Respirar=>Haz una pausa breve antes de responder|Nombrar=>Ponle nombre a la emocion|Actuar=>Elige una accion proporcional,,,,,mediano,l,centro,
+Gestion emocional en el trabajo,Curso breve para practicar regulacion emocional,Modulo 1,4,pregunta_unica,Que ayuda a regular una emocion?,,Ignorarla|Nombrarla|Descargarla con otros,Nombrarla,si,,,mediano,m,izquierda,`;
+
+const csvAiPrompt = `Crea un curso e-learning para PulseStudio en formato CSV.
+Usa exactamente estas columnas:
+curso,descripcion_curso,unidad,orden,tipo,titulo,contenido,opciones,respuesta_correcta,obligatorio,imagen,extra,padding,ancho,alinear,color_fondo
+
+Tipos validos: titulo, parrafo, imagen_texto, imagen, carrusel, statement, tarjetas, tabs, acordeon, lista, embed, html, pregunta_unica, multiple, completar, coincidencia, continuar, separador.
+Usa | para separar alternativas o items.
+Usa => para pares en tarjetas, tabs, acordeon o coincidencia.
+No agregues explicaciones fuera del CSV.`;
 
 type AuthContextValue = {
   session: Session | null;
@@ -387,8 +412,8 @@ async function createCourseRecord(): Promise<CourseSummary> {
   if (isSupabaseConfigured) {
     try {
       return await createSupabaseCourse(course);
-    } catch {
-      // Fall through to the current persistence layer.
+    } catch (error) {
+      throw new Error(error instanceof Error ? error.message : "No se pudo crear el curso en Supabase.");
     }
   }
 
@@ -621,6 +646,23 @@ function courseFromCsv(text: string): Course {
 
   course.lessons = Array.from(lessons.values()).filter((lesson) => lesson.blocks.length);
   if (!course.lessons.length) throw new Error("No se detectaron bloques validos en el CSV.");
+  return course;
+}
+
+function applyCsvImportDetails(course: Course, details: CsvImportDetails) {
+  const title = details.title.trim();
+  const description = details.description.trim();
+  if (title) course.title = title;
+  if (description) course.description = description;
+  course.theme = course.theme || { ...defaultTheme };
+  course.scorm = course.scorm || {};
+  course.scorm.passingScore = Number(details.passingScore) || course.scorm.passingScore || 70;
+  course.metadata = {
+    ...(course.metadata || {}),
+    durationMinutes: Number(details.durationMinutes) || estimateDuration(course),
+    importedFrom: "csv",
+    updatedAt: new Date().toISOString()
+  };
   return course;
 }
 
@@ -940,6 +982,130 @@ function AuthStatus() {
   );
 }
 
+function CreateCourseMenu({ onBlank, onCsv, fullWidth = false, tone = "dark" }: { onBlank: () => void; onCsv: () => void; fullWidth?: boolean; tone?: "dark" | "violet" }) {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (event: PointerEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    window.addEventListener("pointerdown", close);
+    return () => window.removeEventListener("pointerdown", close);
+  }, [open]);
+
+  const buttonClass = tone === "violet"
+    ? "bg-violet text-white"
+    : "bg-ink text-white shadow-soft";
+
+  function choose(action: () => void) {
+    setOpen(false);
+    action();
+  }
+
+  return (
+    <div ref={menuRef} className={`relative ${fullWidth ? "w-full" : ""}`}>
+      <button onClick={() => setOpen((value) => !value)} className={`inline-flex h-9 items-center justify-center gap-2 rounded-md px-3 text-xs font-extrabold ${buttonClass} ${fullWidth ? "w-full" : ""}`}>
+        <Plus size={14} /> Crear curso
+      </button>
+      {open ? (
+        <div className={`absolute z-50 mt-2 w-52 overflow-hidden rounded-lg border border-line bg-white p-1.5 shadow-soft ${fullWidth ? "left-0" : "right-0"}`}>
+          <button onClick={() => choose(onBlank)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-extrabold text-ink hover:bg-mist">
+            <Plus size={15} /> Desde cero
+          </button>
+          <button onClick={() => choose(onCsv)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-extrabold text-ink hover:bg-mist">
+            <Upload size={15} /> Desde CSV
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function CsvImportDialog({ open, importing, error, onClose, onImport }: { open: boolean; importing: boolean; error: string; onClose: () => void; onImport: (file: File, details: CsvImportDetails) => Promise<void> }) {
+  const [file, setFile] = useState<File | null>(null);
+  const [localError, setLocalError] = useState("");
+  const [details, setDetails] = useState<CsvImportDetails>({
+    title: "",
+    description: "",
+    durationMinutes: 20,
+    passingScore: 70
+  });
+
+  useEffect(() => {
+    if (!open) return;
+    setLocalError("");
+    setFile(null);
+    setDetails({
+      title: "",
+      description: "",
+      durationMinutes: 20,
+      passingScore: 70
+    });
+  }, [open]);
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!file) {
+      setLocalError("Selecciona un archivo CSV para continuar.");
+      return;
+    }
+    await onImport(file, details);
+  }
+
+  const currentError = localError || error;
+
+  return (
+    <Dialog.Root open={open} onOpenChange={(value) => !value && onClose()}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-ink/35" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[calc(100vh-32px)] w-[min(860px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl bg-white p-6 shadow-soft">
+          <Dialog.Title className="text-2xl font-black tracking-[-0.03em] text-ink">Crear curso desde CSV</Dialog.Title>
+          <Dialog.Description className="mt-2 text-sm leading-relaxed text-steel">
+            Completa los datos principales, prepara el archivo con la plantilla y luego importalo para abrir el editor.
+          </Dialog.Description>
+          <form onSubmit={submit}>
+            <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+              <section className="rounded-lg border border-line bg-white p-4">
+                <h3 className="text-sm font-black uppercase tracking-[0.12em] text-violet">Datos del curso</h3>
+                <Field label="Titulo" value={details.title} onChange={(value) => setDetails((current) => ({ ...current, title: value }))} />
+                <TextField label="Descripcion" value={details.description} onChange={(value) => setDetails((current) => ({ ...current, description: value }))} rows={4} />
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="Duracion estimada" type="number" value={String(details.durationMinutes)} onChange={(value) => setDetails((current) => ({ ...current, durationMinutes: Number(value) || 0 }))} />
+                  <Field label="Puntaje minimo" type="number" value={String(details.passingScore)} onChange={(value) => setDetails((current) => ({ ...current, passingScore: Number(value) || 70 }))} />
+                </div>
+                <label className="mt-4 grid gap-2 text-xs font-extrabold text-steel">
+                  Archivo CSV
+                  <input type="file" accept=".csv,text/csv" onChange={(event) => setFile(event.target.files?.[0] || null)} className="rounded-md border border-line bg-white p-2 text-sm font-semibold text-ink" />
+                </label>
+                {file ? <p className="mt-2 text-xs font-bold text-steel">Seleccionado: {file.name}</p> : null}
+              </section>
+              <section className="grid gap-4">
+                <div className="rounded-lg border border-line bg-[#fbfbff] p-4">
+                  <h3 className="text-sm font-black uppercase tracking-[0.12em] text-violet">Plantilla CSV</h3>
+                  <pre className="mt-3 max-h-52 overflow-auto rounded-md bg-ink p-3 text-xs leading-relaxed text-white">{csvTemplate}</pre>
+                </div>
+                <div className="rounded-lg border border-line bg-white p-4">
+                  <h3 className="text-sm font-black uppercase tracking-[0.12em] text-violet">Indicaciones para IA</h3>
+                  <textarea readOnly value={csvAiPrompt} className="mt-3 h-36 w-full resize-none rounded-md border border-line bg-mist p-3 text-xs font-semibold leading-relaxed text-ink" />
+                </div>
+              </section>
+            </div>
+            {currentError ? <div className="mt-4 rounded-md border border-red-100 bg-red-50 p-3 text-sm font-bold text-red-700">{currentError}</div> : null}
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" onClick={onClose} className="rounded-md border border-line px-4 py-2 text-sm font-extrabold">Cancelar</button>
+              <button type="submit" disabled={importing} className="rounded-md bg-ink px-4 py-2 text-sm font-extrabold text-white disabled:opacity-50">
+                {importing ? "Importando..." : "Importar y editar"}
+              </button>
+            </div>
+          </form>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
 function DashboardApp() {
   const [courses, setCourses] = useState<CourseSummary[]>([]);
   const [query, setQuery] = useState("");
@@ -947,7 +1113,7 @@ function DashboardApp() {
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState("");
   const [dashboardError, setDashboardError] = useState("");
-  const csvInputRef = useRef<HTMLInputElement | null>(null);
+  const [csvDialogOpen, setCsvDialogOpen] = useState(false);
 
   async function load() {
     setCourses(await loadCourseList());
@@ -955,25 +1121,28 @@ function DashboardApp() {
 
   async function createCourse() {
     setDashboardError("");
-    const course = await createCourseRecord();
-    window.location.href = `${appRoute("/")}?course=${encodeURIComponent(course.id)}`;
+    try {
+      const course = await createCourseRecord();
+      window.location.href = `${appRoute("/")}?course=${encodeURIComponent(course.id)}`;
+    } catch (error) {
+      setDashboardError(error instanceof Error ? error.message : "No se pudo crear el curso.");
+    }
   }
 
-  async function importCsv(file?: File | null) {
+  async function importCsv(file?: File | null, details?: CsvImportDetails) {
     if (!file) return;
     setImporting(true);
     setImportError("");
     try {
       const text = await file.text();
       const course = courseFromCsv(text);
+      if (details) applyCsvImportDetails(course, details);
       const result = await saveCourseRecord(course);
       if (!result.ok) throw new Error(result.error || "No se pudo guardar el curso importado.");
       window.location.href = `${appRoute("/")}?course=${encodeURIComponent(course.id)}`;
     } catch (error) {
       setImportError(error instanceof Error ? error.message : "No se pudo importar el CSV.");
       setImporting(false);
-    } finally {
-      if (csvInputRef.current) csvInputRef.current.value = "";
     }
   }
 
@@ -1017,17 +1186,14 @@ function DashboardApp() {
     <Tooltip.Provider>
       <AppHeader section="dashboard" actions={
         <div className="flex items-center gap-2">
-          <input ref={csvInputRef} className="hidden" type="file" accept=".csv,text/csv" onChange={(event) => importCsv(event.target.files?.[0])} />
-          <button onClick={() => csvInputRef.current?.click()} disabled={importing} className="hidden h-9 items-center gap-2 rounded-md border border-line bg-white px-3 text-xs font-extrabold text-ink hover:bg-mist disabled:opacity-50 md:inline-flex">
-            <Upload size={14} /> {importing ? "Importando..." : "Importar CSV"}
-          </button>
-          <button onClick={createCourse} className="inline-flex h-9 items-center gap-2 rounded-md bg-ink px-3 text-xs font-extrabold text-white shadow-soft"><Plus size={14} /> Crear curso</button>
+          <CreateCourseMenu onBlank={createCourse} onCsv={() => { setImportError(""); setCsvDialogOpen(true); }} />
         </div>
       } />
       <main className="grid min-h-[calc(100vh-76px)] grid-cols-[260px_minmax(0,1fr)] bg-white">
         <aside className="border-r border-line p-4">
-          <button onClick={createCourse} className="mb-5 flex h-10 w-full items-center justify-center gap-2 rounded-md bg-violet text-sm font-extrabold text-white"><Plus size={16} /> Crear curso</button>
-          <button onClick={() => csvInputRef.current?.click()} disabled={importing} className="mb-5 flex h-10 w-full items-center justify-center gap-2 rounded-md border border-line bg-white text-sm font-extrabold text-ink hover:bg-mist disabled:opacity-50"><Upload size={16} /> Importar CSV</button>
+          <div className="mb-5">
+            <CreateCourseMenu onBlank={createCourse} onCsv={() => { setImportError(""); setCsvDialogOpen(true); }} fullWidth tone="violet" />
+          </div>
           {["Todos los cursos", "Recientes"].map((item, index) => (
             <a key={item} className={`block rounded-md px-3 py-3 text-sm font-bold ${index === 0 ? "bg-mist text-ink" : "text-steel"}`} href="#">{item}</a>
           ))}
@@ -1045,7 +1211,7 @@ function DashboardApp() {
             <select className="h-11 rounded-md border border-line px-3 text-sm font-semibold"><option>Recientes</option><option>Titulo</option></select>
             <select className="h-11 rounded-md border border-line px-3 text-sm font-semibold"><option>Todos</option><option>Cursos</option></select>
           </div>
-          {importError || dashboardError ? <div className="mb-5 rounded-md border border-red-100 bg-red-50 p-3 text-sm font-bold text-red-700">{importError || dashboardError}</div> : null}
+          {(!csvDialogOpen && importError) || dashboardError ? <div className="mb-5 rounded-md border border-red-100 bg-red-50 p-3 text-sm font-bold text-red-700">{(!csvDialogOpen && importError) || dashboardError}</div> : null}
           <div className="grid grid-cols-[repeat(auto-fill,minmax(190px,220px))] gap-4">
             {filtered.map((course, index) => (
               <CourseCard key={course.id} course={course} index={index} onDelete={() => setDeleteTarget(course)} />
@@ -1053,6 +1219,7 @@ function DashboardApp() {
           </div>
         </section>
       </main>
+      <CsvImportDialog open={csvDialogOpen} importing={importing} error={importError} onClose={() => { if (!importing) setCsvDialogOpen(false); }} onImport={async (file, details) => importCsv(file, details)} />
       <ConfirmDelete course={deleteTarget} onCancel={() => setDeleteTarget(null)} onConfirm={deleteCourse} />
     </Tooltip.Provider>
   );
