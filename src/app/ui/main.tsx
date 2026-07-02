@@ -107,7 +107,8 @@ const defaultTheme = {
   inkColor: "#181833",
   backgroundColor: "#FFFFFF",
   buttonColor: "#181833",
-  fontFamily: "inter"
+  fontFamily: "inter",
+  fontWeight: "normal"
 };
 
 const blockTools: Array<{ type: BlockType; label: string; icon: React.ReactNode }> = [
@@ -195,26 +196,65 @@ function courseTheme(course: Course) {
     inkColor: themeValue(course.theme, "inkColor"),
     backgroundColor: themeValue(course.theme, "backgroundColor"),
     buttonColor: themeValue(course.theme, "buttonColor"),
-    fontFamily: themeValue(course.theme, "fontFamily")
+    fontFamily: themeValue(course.theme, "fontFamily"),
+    fontWeight: themeValue(course.theme, "fontWeight")
   };
 }
 
 function themeFontFamily(fontFamily: string) {
-  if (fontFamily === "serif") return 'Georgia, "Times New Roman", serif';
+  if (fontFamily === "arial") return 'Arial, Helvetica, sans-serif';
+  if (fontFamily === "georgia") return 'Georgia, "Times New Roman", serif';
+  if (fontFamily === "montserrat") return 'Montserrat, Inter, ui-sans-serif, system-ui, sans-serif';
+  if (fontFamily === "nunito") return 'Nunito, Inter, ui-sans-serif, system-ui, sans-serif';
+  if (fontFamily === "open-sans") return '"Open Sans", Inter, ui-sans-serif, system-ui, sans-serif';
+  if (fontFamily === "roboto") return 'Roboto, Inter, ui-sans-serif, system-ui, sans-serif';
   if (fontFamily === "system") return 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
   return 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
 }
 
+function themeFontWeights(fontWeight: string) {
+  if (fontWeight === "light") return { body: "420", strong: "620", heading: "720" };
+  if (fontWeight === "heavy") return { body: "720", strong: "840", heading: "900" };
+  return { body: "620", strong: "760", heading: "850" };
+}
+
 function courseThemeStyle(course: Course): React.CSSProperties {
   const theme = courseTheme(course);
+  const weights = themeFontWeights(theme.fontWeight);
   return {
     "--ps-primary": theme.primaryColor,
     "--ps-accent": theme.accentColor,
     "--ps-ink": theme.inkColor,
     "--ps-bg": theme.backgroundColor,
     "--ps-button": theme.buttonColor,
-    fontFamily: themeFontFamily(theme.fontFamily)
+    "--ps-weight-body": weights.body,
+    "--ps-weight-strong": weights.strong,
+    "--ps-weight-heading": weights.heading,
+    fontFamily: themeFontFamily(theme.fontFamily),
+    fontWeight: weights.body
   } as React.CSSProperties;
+}
+
+function scrollPageToTopNow() {
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+  window.scrollTo(0, 0);
+}
+
+function scheduleScrollPageToTop(target?: HTMLElement | null) {
+  scrollPageToTopNow();
+  window.requestAnimationFrame(() => {
+    scrollPageToTopNow();
+    target?.scrollTo?.(0, 0);
+    target?.scrollIntoView?.({ block: "start" });
+  });
+  window.setTimeout(() => {
+    scrollPageToTopNow();
+    target?.scrollTo?.(0, 0);
+    target?.scrollIntoView?.({ block: "start" });
+  }, 80);
+  window.setTimeout(scrollPageToTopNow, 180);
+  window.setTimeout(scrollPageToTopNow, 320);
 }
 
 function courseCoverImage(course: Course | CourseSummary) {
@@ -820,7 +860,8 @@ function CourseSettingsDialog({ course, onChange }: { course: Course; onChange: 
               <div className="flex flex-wrap gap-3">
                 <HexColorField label="Fondo" value={theme.backgroundColor} onChange={(value) => setTheme("backgroundColor", value)} />
                 <HexColorField label="Botones" value={theme.buttonColor} onChange={(value) => setTheme("buttonColor", value)} />
-                <SelectField label="Fuente" value={theme.fontFamily} onChange={(value) => setTheme("fontFamily", value)} options={[["inter", "Inter"], ["system", "Sistema"], ["serif", "Serif elegante"]]} />
+                <SelectField label="Fuente" value={theme.fontFamily} onChange={(value) => setTheme("fontFamily", value)} options={[["inter", "Inter"], ["system", "Sistema"], ["arial", "Arial"], ["roboto", "Roboto"], ["open-sans", "Open Sans"], ["montserrat", "Montserrat"], ["nunito", "Nunito"], ["georgia", "Georgia"]]} />
+                <SelectField label="Peso global" value={theme.fontWeight} onChange={(value) => setTheme("fontWeight", value)} options={[["light", "Liviana"], ["normal", "Normal"], ["heavy", "Pesada"]]} />
               </div>
             </div>
           </div>
@@ -1674,11 +1715,12 @@ function PreviewApp() {
   const [lessonIndex, setLessonIndex] = useState(0);
   const [revealedScreens, setRevealedScreens] = useState<Record<string, number>>({});
   const [correctQuestions, setCorrectQuestions] = useState<Record<string, boolean>>({});
+  const previewMainRef = useRef<HTMLElement | null>(null);
   useEffect(() => {
     loadCourseById(getCourseId()).then(setCourse);
   }, []);
   useEffect(() => {
-    window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
+    scheduleScrollPageToTop(previewMainRef.current);
   }, [lessonIndex]);
   if (!course) return <div className="grid min-h-screen place-items-center text-sm font-bold text-steel">Cargando vista previa...</div>;
   const lesson = course.lessons[lessonIndex] || course.lessons[0];
@@ -1708,13 +1750,18 @@ function PreviewApp() {
     window.setTimeout(() => window.scrollBy({ top: 220, behavior: "smooth" }), 40);
   }
 
+  function goToLesson(index: number) {
+    setLessonIndex(index);
+    scheduleScrollPageToTop(previewMainRef.current);
+  }
+
   return (
-    <div className="grid min-h-screen grid-cols-[260px_1fr]" style={{ ...courseThemeStyle(course), background: "var(--ps-bg)", color: "var(--ps-ink)" }}>
+    <div className="course-theme-scope grid min-h-screen grid-cols-[260px_1fr]" style={{ ...courseThemeStyle(course), background: "var(--ps-bg)", color: "var(--ps-ink)" }}>
       <aside className="sticky top-0 h-screen overflow-y-auto border-r border-line bg-white">
         <div className="p-6 text-white" style={{ background: cover ? `linear-gradient(rgba(24,24,51,.42), rgba(24,24,51,.72)), url("${resolveAsset(cover)}") center / cover no-repeat` : "linear-gradient(rgba(24,24,51,.18), rgba(24,24,51,.38)), linear-gradient(135deg, var(--ps-primary), var(--ps-accent))" }}><p className="text-[11px] font-black uppercase tracking-[0.12em]">Vista previa</p><h1 className="mt-5 text-2xl font-black">{course.title}</h1><p className="mt-6 text-xs font-black">CURSO {totalProgress}%</p><div className="mt-3 h-1 bg-white/35"><i className="block h-full bg-white" style={{ width: `${totalProgress}%` }} /></div><p className="mt-5 text-xs font-black">UNIDAD {unitProgress}%</p><div className="mt-3 h-1 bg-white/35"><i className="block h-full" style={{ width: `${unitProgress}%`, backgroundColor: "var(--ps-primary)" }} /></div></div>
-        <nav className="grid gap-1.5 p-4">{course.lessons.map((item, index) => <button key={item.id} onClick={() => setLessonIndex(index)} className={`grid grid-cols-[24px_1fr_auto] items-center gap-2 rounded-md px-2.5 py-2 text-left ${index === lessonIndex ? "bg-mist" : ""}`}><span className="grid size-5 place-items-center rounded-full border border-line text-xs font-bold">{index + 1}</span><strong className="truncate text-sm">{item.title}</strong><small className="text-[11px] font-bold text-steel">{index <= lessonIndex ? "Disponible" : "Bloqueada"}</small></button>)}</nav>
+        <nav className="grid gap-1.5 p-4">{course.lessons.map((item, index) => <button key={item.id} onClick={() => goToLesson(index)} className={`grid grid-cols-[24px_1fr_auto] items-center gap-2 rounded-md px-2.5 py-2 text-left ${index === lessonIndex ? "bg-mist" : ""}`}><span className="grid size-5 place-items-center rounded-full border border-line text-xs font-bold">{index + 1}</span><strong className="truncate text-sm">{item.title}</strong><small className="text-[11px] font-bold text-steel">{index <= lessonIndex ? "Disponible" : "Bloqueada"}</small></button>)}</nav>
       </aside>
-      <main className="p-8"><a className="mb-7 inline-flex rounded-md border border-line px-4 py-2 text-sm font-extrabold" href={`${appRoute("/")}?course=${course.id}`}>Volver al editor</a><section className="mx-auto max-w-5xl"><p className="text-xs font-black uppercase tracking-[0.12em]" style={{ color: "var(--ps-primary)" }}>Unidad {lessonIndex + 1} de {course.lessons.length}</p><h2 className="mb-7 text-4xl font-black tracking-[-0.04em]">{lesson.title}</h2><div className="grid gap-6">{lesson.blocks.map((block, index) => {
+      <main ref={previewMainRef} className="p-8"><a className="mb-7 inline-flex rounded-md border border-line px-4 py-2 text-sm font-extrabold" href={`${appRoute("/")}?course=${course.id}`}>Volver al editor</a><section className="mx-auto max-w-5xl"><p className="text-xs font-black uppercase tracking-[0.12em]" style={{ color: "var(--ps-primary)" }}>Unidad {lessonIndex + 1} de {course.lessons.length}</p><h2 className="mb-7 text-4xl font-black tracking-[-0.04em]">{lesson.title}</h2><div className="grid gap-6">{lesson.blocks.map((block, index) => {
         if (map[index] > revealedScreen) return null;
         if (block.type === "continue_button") {
           if (map[index] !== revealedScreen || revealedScreen >= screenCount(lesson) - 1) return null;
@@ -1722,7 +1769,7 @@ function PreviewApp() {
           return <FadeInOnView key={block.id}><BlockContentFrame block={block}><ContinueButtonPreview content={block.content} disabled={!enabled} onClick={revealNext} /></BlockContentFrame></FadeInOnView>;
         }
         return <FadeInOnView key={block.id}><BlockContentFrame block={block}><BlockPreview block={block} onQuizStatusChange={(id, correct) => setCorrectQuestions((current) => ({ ...current, [id]: correct }))} /></BlockContentFrame></FadeInOnView>;
-      })}</div>{revealedScreen >= screenCount(lesson) - 1 && lessonIndex < course.lessons.length - 1 ? <div className="mt-8 text-center"><button disabled={!canFinishLesson()} onClick={() => canFinishLesson() && setLessonIndex(lessonIndex + 1)} className="w-full max-w-sm rounded-md px-5 py-3 font-extrabold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-50" style={{ backgroundColor: "var(--ps-button)" }}>Ir a la siguiente unidad</button></div> : null}</section></main>
+      })}</div>{revealedScreen >= screenCount(lesson) - 1 && lessonIndex < course.lessons.length - 1 ? <div className="mt-8 text-center"><button disabled={!canFinishLesson()} onClick={() => canFinishLesson() && goToLesson(lessonIndex + 1)} className="w-full max-w-sm rounded-md px-5 py-3 font-extrabold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-50" style={{ backgroundColor: "var(--ps-button)" }}>Ir a la siguiente unidad</button></div> : null}</section></main>
     </div>
   );
 }

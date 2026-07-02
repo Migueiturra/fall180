@@ -40,20 +40,35 @@
   }
 
   function themeFontFamily(value) {
-    if (value === "serif") return 'Georgia, "Times New Roman", serif';
+    if (value === "arial") return 'Arial, Helvetica, sans-serif';
+    if (value === "georgia" || value === "serif") return 'Georgia, "Times New Roman", serif';
+    if (value === "montserrat") return 'Montserrat, Inter, ui-sans-serif, system-ui, sans-serif';
+    if (value === "nunito") return 'Nunito, Inter, ui-sans-serif, system-ui, sans-serif';
+    if (value === "open-sans") return '"Open Sans", Inter, ui-sans-serif, system-ui, sans-serif';
+    if (value === "roboto") return 'Roboto, Inter, ui-sans-serif, system-ui, sans-serif';
     if (value === "system") return 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
     return 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+  }
+
+  function themeFontWeights(value) {
+    if (value === "light") return { body: "420", strong: "620", heading: "720" };
+    if (value === "heavy") return { body: "720", strong: "840", heading: "900" };
+    return { body: "620", strong: "760", heading: "850" };
   }
 
   function applyTheme(course) {
     var theme = course.theme || {};
     var root = document.documentElement;
+    var weights = themeFontWeights(themeValue(theme, "fontWeight", "normal"));
     root.style.setProperty("--ps-primary", safeHexColor(themeValue(theme, "primaryColor", "#8182F2"), "#8182F2"));
     root.style.setProperty("--ps-accent", safeHexColor(themeValue(theme, "accentColor", "#3C3C59"), "#3C3C59"));
     root.style.setProperty("--ps-ink", safeHexColor(themeValue(theme, "inkColor", "#181833"), "#181833"));
     root.style.setProperty("--ps-bg", safeHexColor(themeValue(theme, "backgroundColor", "#FFFFFF"), "#FFFFFF"));
     root.style.setProperty("--ps-button", safeHexColor(themeValue(theme, "buttonColor", "#181833"), "#181833"));
     root.style.setProperty("--ps-font-family", themeFontFamily(themeValue(theme, "fontFamily", "inter")));
+    root.style.setProperty("--ps-weight-body", weights.body);
+    root.style.setProperty("--ps-weight-strong", weights.strong);
+    root.style.setProperty("--ps-weight-heading", weights.heading);
   }
 
   function applyCourseCover(course) {
@@ -643,17 +658,28 @@
     if (index < 0 || index >= state.course.lessons.length || index > state.unlockedLessonIndex) return;
     state.currentLessonIndex = index;
     closeMobileMenu();
+    scrollCourseToTop();
     renderLesson();
     scrollCourseToTop();
   }
 
+  function setCourseScrollTopNow() {
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    window.scrollTo(0, 0);
+    var main = document.querySelector(".course-main");
+    if (main && typeof main.scrollTo === "function") main.scrollTo(0, 0);
+  }
+
   function scrollCourseToTop() {
+    setCourseScrollTopNow();
     window.requestAnimationFrame(function () {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      if (els.lesson) els.lesson.scrollIntoView({ behavior: "smooth", block: "start" });
-      var main = document.querySelector(".course-main");
-      if (main && typeof main.scrollTo === "function") main.scrollTo({ top: 0, behavior: "smooth" });
+      setCourseScrollTopNow();
+      if (els.lesson) els.lesson.scrollIntoView({ block: "start" });
     });
+    window.setTimeout(setCourseScrollTopNow, 80);
+    window.setTimeout(setCourseScrollTopNow, 180);
+    window.setTimeout(setCourseScrollTopNow, 320);
   }
 
   function closeMobileMenu() {

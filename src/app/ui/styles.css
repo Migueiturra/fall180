@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Montserrat:wght@400;600;700;800;900&family=Nunito:wght@400;600;700;800;900&family=Open+Sans:wght@400;600;700;800&family=Roboto:wght@400;500;700;900&display=swap");
 @import "tailwindcss";
 
 @theme {
@@ -40,6 +41,31 @@ summary::-webkit-details-marker {
 
 details[open] .details-chevron {
   transform: rotate(90deg);
+}
+
+.course-theme-scope,
+.course-theme-scope .rich-output,
+.course-theme-scope p,
+.course-theme-scope li,
+.course-theme-scope label,
+.course-theme-scope input,
+.course-theme-scope select {
+  font-weight: var(--ps-weight-body, 620);
+}
+
+.course-theme-scope button,
+.course-theme-scope strong,
+.course-theme-scope .quiz-option,
+.course-theme-scope .flip-card-face {
+  font-weight: var(--ps-weight-strong, 760);
+}
+
+.course-theme-scope h1,
+.course-theme-scope h2,
+.course-theme-scope h3,
+.course-theme-scope summary,
+.course-theme-scope .statement-block {
+  font-weight: var(--ps-weight-heading, 850) !important;
 }
 
 .rich-output p,
