@@ -901,7 +901,7 @@ function AuthPage() {
   }
 
   return (
-    <main className="grid min-h-screen grid-cols-1 bg-[#f7f7fc] lg:grid-cols-[minmax(420px,0.9fr)_1.1fr]">
+    <main className="app-ui-scope grid min-h-screen grid-cols-1 bg-[#f7f7fc] lg:grid-cols-[minmax(420px,0.9fr)_1.1fr]">
       <section className="flex flex-col justify-between bg-ink p-8 text-white">
         <div className="flex items-center gap-2">
           <span className="grid size-5 place-items-center rounded-full bg-violet/25"><span className="size-2 rounded-full bg-violet" /></span>
@@ -943,7 +943,7 @@ function App() {
 
 function AppHeader({ section, actions }: { section: "dashboard" | "editor" | "preview"; actions?: React.ReactNode }) {
   return (
-    <header className="sticky top-0 z-30 flex h-[56px] items-center border-b border-line bg-white/90 px-4 backdrop-blur-xl">
+    <header className="app-ui-scope sticky top-0 z-30 flex h-[56px] items-center border-b border-line bg-white/90 px-4 backdrop-blur-xl">
       <a className="flex w-[220px] items-center gap-2 no-underline" href={appRoute("/courses.html")}>
         <span className="grid size-4 place-items-center rounded-full bg-violet/20">
           <span className="size-1.5 rounded-full bg-violet" />
@@ -1197,7 +1197,7 @@ function DashboardApp() {
           <CreateCourseMenu onBlank={createCourse} onCsv={() => { setImportError(""); setCsvDialogOpen(true); }} />
         </div>
       } />
-      <main className="grid min-h-[calc(100vh-76px)] grid-cols-[260px_minmax(0,1fr)] bg-white">
+      <main className="app-ui-scope grid min-h-[calc(100vh-76px)] grid-cols-[260px_minmax(0,1fr)] bg-white">
         <aside className="border-r border-line p-4">
           <div className="mb-5">
             <CreateCourseMenu onBlank={createCourse} onCsv={() => { setImportError(""); setCsvDialogOpen(true); }} fullWidth tone="violet" />
@@ -1371,7 +1371,7 @@ function EditorApp() {
         <button onClick={save} className="inline-flex h-9 items-center gap-2 rounded-md bg-mist px-3 text-xs font-extrabold"><Save size={14} /> Guardar</button>
         <button onClick={exportScorm} className="inline-flex h-9 items-center gap-2 rounded-md bg-ink px-3 text-xs font-extrabold text-white"><Upload size={14} /> Exportar SCORM</button>
       </div>
-      <main className="course-theme-scope grid min-h-[calc(100vh-56px)] grid-cols-[220px_minmax(0,1fr)] gap-3 bg-[#f0f0f8] p-3" style={courseThemeStyle(course)}>
+      <main className="app-ui-scope grid min-h-[calc(100vh-56px)] grid-cols-[220px_minmax(0,1fr)] gap-3 bg-[#f0f0f8] p-3" style={courseThemeStyle(course)}>
         <aside className="sticky top-[68px] flex h-[calc(100vh-80px)] flex-col overflow-hidden rounded-lg bg-white shadow-soft">
           <section className="border-b border-line p-3">
             <p className="text-[10px] font-black uppercase tracking-[0.12em] text-violet">Bloques</p>
@@ -1689,7 +1689,7 @@ function BlockShell({ block, editing, onEdit, onSave, onDuplicate, onMove, onDel
         {editing ? (
           <>
             <BlockLayoutControls block={block} onChange={patch} />
-            <BlockContentFrame block={block}>
+            <BlockContentFrame block={block} themed={false}>
               <BlockForm block={block} onChange={onChange} />
             </BlockContentFrame>
           </>
@@ -1758,11 +1758,11 @@ function SegmentedControl({ label, value, options, onChange }: { label: string; 
   );
 }
 
-function BlockContentFrame({ block, children }: { block: CourseBlock; children: React.ReactNode }) {
+function BlockContentFrame({ block, children, themed = true }: { block: CourseBlock; children: React.ReactNode; themed?: boolean }) {
   const background = /^#[0-9a-fA-F]{6}$/.test(block.content.blockBackground || "") ? block.content.blockBackground : undefined;
   const surfaceClass = `${blockRadiusClass(block.content)} ${blockBorderClass(block.content)} ${blockShadowClass(block.content)}`;
   return (
-    <div className={`${blockPaddingClass(block.content)} ${surfaceClass}`} style={background ? { background } : undefined}>
+    <div className={`${themed ? "course-theme-scope" : "app-form-scope"} ${blockPaddingClass(block.content)} ${surfaceClass}`} style={background ? { background } : undefined}>
       <div className={`w-full ${blockWidthClass(block.content)} ${blockAlignClass(block.content)} mx-auto`}>
         {children}
       </div>

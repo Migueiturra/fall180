@@ -43,6 +43,56 @@ details[open] .details-chevron {
   transform: rotate(90deg);
 }
 
+.app-ui-scope {
+  --ui-weight-body: 450;
+  --ui-weight-medium: 520;
+  --ui-weight-strong: 620;
+  --ui-weight-heading: 700;
+  font-size: 14px;
+  line-height: 1.45;
+  font-weight: var(--ui-weight-body);
+}
+
+.app-ui-scope button:not(.course-theme-scope *),
+.app-ui-scope input:not(.course-theme-scope *),
+.app-ui-scope textarea:not(.course-theme-scope *),
+.app-ui-scope select:not(.course-theme-scope *) {
+  font-weight: var(--ui-weight-medium);
+}
+
+.app-ui-scope .font-semibold:not(.course-theme-scope *),
+.app-ui-scope .font-bold:not(.course-theme-scope *) {
+  font-weight: var(--ui-weight-strong);
+}
+
+.app-ui-scope .font-extrabold:not(.course-theme-scope *),
+.app-ui-scope .font-black:not(.course-theme-scope *) {
+  font-weight: var(--ui-weight-heading);
+}
+
+.app-ui-scope .tracking-\[-0\.02em\]:not(.course-theme-scope *),
+.app-ui-scope .tracking-\[-0\.03em\]:not(.course-theme-scope *),
+.app-ui-scope .tracking-\[-0\.04em\]:not(.course-theme-scope *) {
+  letter-spacing: 0;
+}
+
+.app-form-scope label {
+  font-size: 12px;
+  font-weight: var(--ui-weight-medium);
+  color: #7a7a8c;
+}
+
+.app-form-scope input,
+.app-form-scope textarea,
+.app-form-scope select {
+  font-size: 13px;
+  font-weight: var(--ui-weight-body);
+}
+
+.app-form-scope button {
+  font-weight: var(--ui-weight-strong);
+}
+
 .course-theme-scope,
 .course-theme-scope .rich-output,
 .course-theme-scope p,
