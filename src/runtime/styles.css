@@ -1,8 +1,14 @@
 :root {
   color-scheme: light;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
-  background: #ffffff;
-  color: #181833;
+  --ps-primary: #8182f2;
+  --ps-accent: #3c3c59;
+  --ps-ink: #181833;
+  --ps-bg: #ffffff;
+  --ps-button: #181833;
+  --ps-font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  font-family: var(--ps-font-family);
+  background: var(--ps-bg);
+  color: var(--ps-ink);
 }
 
 * {
@@ -12,10 +18,11 @@
 body {
   margin: 0;
   min-height: 100vh;
+  background: var(--ps-bg);
 }
 
 button {
-  background: #181833;
+  background: var(--ps-button);
   border: 0;
   border-radius: 6px;
   color: #fff;
@@ -53,14 +60,14 @@ button:disabled {
 .sidebar > div:first-child {
   background:
     linear-gradient(rgba(24, 24, 51, 0.42), rgba(24, 24, 51, 0.70)),
-    linear-gradient(135deg, #8182f2, #3c3c59);
+    linear-gradient(135deg, var(--ps-primary), var(--ps-accent));
   color: #fff;
   min-height: 220px;
   padding: 24px 20px;
 }
 
 .eyebrow {
-  color: #8182f2;
+  color: var(--ps-primary);
   font-size: 11px;
   font-weight: 850;
   letter-spacing: 0.08em;
@@ -110,7 +117,7 @@ h1 {
 .lesson-tab.active,
 .lesson-tab:hover {
   background: #f4f4ff;
-  color: #181833;
+  color: var(--ps-ink);
 }
 
 .lesson-tab.locked {
@@ -167,7 +174,7 @@ h1 {
 }
 
 .progress-bar {
-  background: #8182f2;
+  background: var(--ps-primary);
   height: 100%;
   transition: width 180ms ease;
   width: 0;
@@ -187,7 +194,7 @@ h1 {
 }
 
 .lesson-title {
-  color: #8182f2;
+  color: var(--ps-primary);
   font-size: 13px;
   font-weight: 850;
   letter-spacing: .06em;
@@ -196,7 +203,7 @@ h1 {
 }
 
 .unit-heading {
-  color: #181833;
+  color: var(--ps-ink);
   font-size: 44px;
   letter-spacing: -0.06em;
   line-height: 1;
@@ -220,7 +227,7 @@ h1 {
 }
 
 .unit-progress i {
-  background: #8182f2;
+  background: var(--ps-primary);
   display: block;
   height: 100%;
   transition: width 180ms ease;
@@ -305,7 +312,7 @@ h1 {
 }
 
 .block h2 {
-  color: #181833;
+  color: var(--ps-ink);
   font-size: 42px;
   letter-spacing: -0.06em;
   line-height: 1;
@@ -313,14 +320,14 @@ h1 {
 }
 
 .block p {
-  color: #303041;
+  color: var(--ps-ink);
   font-size: 18px;
   line-height: 1.66;
   margin: 0;
 }
 
 .rich-output {
-  color: #303041;
+  color: var(--ps-ink);
   font-size: 18px;
   line-height: 1.66;
 }

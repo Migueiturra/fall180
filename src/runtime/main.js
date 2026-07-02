@@ -31,6 +31,31 @@
       .replace(/'/g, "&#039;");
   }
 
+  function safeHexColor(value, fallback) {
+    return /^#[0-9a-fA-F]{6}$/.test(value || "") ? value : fallback;
+  }
+
+  function themeValue(theme, key, fallback) {
+    return typeof theme[key] === "string" && theme[key].trim() ? theme[key] : fallback;
+  }
+
+  function themeFontFamily(value) {
+    if (value === "serif") return 'Georgia, "Times New Roman", serif';
+    if (value === "system") return 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+    return 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+  }
+
+  function applyTheme(course) {
+    var theme = course.theme || {};
+    var root = document.documentElement;
+    root.style.setProperty("--ps-primary", safeHexColor(themeValue(theme, "primaryColor", "#8182F2"), "#8182F2"));
+    root.style.setProperty("--ps-accent", safeHexColor(themeValue(theme, "accentColor", "#3C3C59"), "#3C3C59"));
+    root.style.setProperty("--ps-ink", safeHexColor(themeValue(theme, "inkColor", "#181833"), "#181833"));
+    root.style.setProperty("--ps-bg", safeHexColor(themeValue(theme, "backgroundColor", "#FFFFFF"), "#FFFFFF"));
+    root.style.setProperty("--ps-button", safeHexColor(themeValue(theme, "buttonColor", "#181833"), "#181833"));
+    root.style.setProperty("--ps-font-family", themeFontFamily(themeValue(theme, "fontFamily", "inter")));
+  }
+
   function sanitizeRichHtml(value) {
     var template = document.createElement("template");
     var allowedTags = ["B", "BR", "DIV", "EM", "I", "LI", "OL", "P", "SPAN", "STRONG", "U", "UL"];
@@ -122,10 +147,6 @@
     if (content.htmlVerticalAlign === "top") return "flex-start";
     if (content.htmlVerticalAlign === "bottom") return "flex-end";
     return "center";
-  }
-
-  function safeHexColor(value, fallback) {
-    return /^#[0-9a-fA-F]{6}$/.test(value || "") ? value : fallback;
   }
 
   function plainTextFromHtml(value) {
@@ -389,7 +410,7 @@
 
     if (block.type === "tabs") {
       var tabItems = (block.content.items || []).slice(0, 6);
-      var accent = safeHexColor(block.content.accentColor, "#4b0f78");
+    var accent = safeHexColor(block.content.accentColor, "#4b0f78");
       var tabBackground = safeHexColor(block.content.tabBackground, "#f7f7fa");
       var panelBackground = safeHexColor(block.content.panelBackground, "#ffffff");
       var tabs = tabItems.map(function (item, index) {
@@ -536,7 +557,7 @@
   function renderContinue(block, screen, screens) {
     var lesson = currentLesson();
     var canContinue = requiredQuestionsComplete(lesson, screen);
-    var color = /^#[0-9a-fA-F]{6}$/.test(block.content.buttonColor || "") ? block.content.buttonColor : "#181833";
+    var color = safeHexColor(block.content.buttonColor, "var(--ps-button)");
     var size = ["small", "medium", "full"].indexOf(block.content.buttonSize) !== -1 ? block.content.buttonSize : "medium";
     return '<article class="block continue-panel continue-panel-clean reveal-block">' +
       '<button class="continue-button continue-' + size + '" style="background:' + escapeHtml(color) + '" type="button" data-continue' + (canContinue ? "" : " disabled") + '>' + escapeHtml(block.content.label || "Continuar") + '</button>' +
@@ -795,6 +816,7 @@
 
   function init(course) {
     state.course = course;
+    applyTheme(course);
     els.title.textContent = course.title;
     els.description.textContent = course.description;
     window.ScormRuntime.initialize();

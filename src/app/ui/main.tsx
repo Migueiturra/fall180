@@ -99,6 +99,14 @@ type CourseBlock = {
 const colors = ["#181833", "#3C3C59", "#7A7A8C", "#8C8CBF", "#8182F2", "#2F6FED", "#119C8D", "#D14D3F", "#F2A93B"];
 const demoCourse = demoCourseData as Course;
 const staticCoursesKey = "fall180-static-courses";
+const defaultTheme = {
+  primaryColor: "#8182F2",
+  accentColor: "#3C3C59",
+  inkColor: "#181833",
+  backgroundColor: "#FFFFFF",
+  buttonColor: "#181833",
+  fontFamily: "inter"
+};
 
 const blockTools: Array<{ type: BlockType; label: string; icon: React.ReactNode }> = [
   { type: "heading", label: "Titulo", icon: <BookOpen size={15} /> },
@@ -172,6 +180,40 @@ function estimateDuration(course: Course) {
   return Math.max(3, Math.round(blockCount * 1.5));
 }
 
+function themeValue(theme: Record<string, unknown> | undefined, key: keyof typeof defaultTheme) {
+  const value = theme?.[key];
+  return typeof value === "string" && value.trim() ? value : defaultTheme[key];
+}
+
+function courseTheme(course: Course) {
+  return {
+    primaryColor: themeValue(course.theme, "primaryColor"),
+    accentColor: themeValue(course.theme, "accentColor"),
+    inkColor: themeValue(course.theme, "inkColor"),
+    backgroundColor: themeValue(course.theme, "backgroundColor"),
+    buttonColor: themeValue(course.theme, "buttonColor"),
+    fontFamily: themeValue(course.theme, "fontFamily")
+  };
+}
+
+function themeFontFamily(fontFamily: string) {
+  if (fontFamily === "serif") return 'Georgia, "Times New Roman", serif';
+  if (fontFamily === "system") return 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+  return 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+}
+
+function courseThemeStyle(course: Course): React.CSSProperties {
+  const theme = courseTheme(course);
+  return {
+    "--ps-primary": theme.primaryColor,
+    "--ps-accent": theme.accentColor,
+    "--ps-ink": theme.inkColor,
+    "--ps-bg": theme.backgroundColor,
+    "--ps-button": theme.buttonColor,
+    fontFamily: themeFontFamily(theme.fontFamily)
+  } as React.CSSProperties;
+}
+
 function duplicateBlock(block: CourseBlock): CourseBlock {
   return { ...structuredClone(block), id: uid("b") };
 }
@@ -243,6 +285,7 @@ async function createCourseRecord(): Promise<CourseSummary> {
   course.id = `nuevo-curso-${Date.now()}`;
   course.title = "Nuevo curso";
   course.description = "Describe el objetivo de este curso.";
+  course.theme = { ...defaultTheme };
   course.lessons = [{
     id: uid("lesson"),
     title: "Bienvenida",
@@ -400,7 +443,7 @@ function defaultBlock(type: BlockType): CourseBlock {
   if (type === "quiz_multiple_response") return { id: uid("b"), type, content: { question: "Selecciona todas las alternativas correctas", options: ["Respuesta correcta", "Otra respuesta correcta", "Distractor"], correctAnswers: [0, 1], required: true, feedbackCorrect: "Correcto.", feedbackIncorrect: "Revisa las alternativas." } };
   if (type === "quiz_fill_blank") return { id: uid("b"), type, content: { question: "Completa la frase", prompt: "La pieza que reconoce el LMS es el archivo ____.", answers: ["imsmanifest.xml"], caseSensitive: false, required: true, feedbackCorrect: "Correcto.", feedbackIncorrect: "Revisa la respuesta." } };
   if (type === "quiz_matching") return { id: uid("b"), type, content: { question: "Relaciona cada concepto con su descripcion", pairs: [{ prompt: "SCORM", match: "Paquete que conversa con el LMS" }, { prompt: "Manifest", match: "Archivo que describe el contenido" }], required: true, feedbackCorrect: "Correcto.", feedbackIncorrect: "Revisa las coincidencias." } };
-  if (type === "continue_button") return { id: uid("b"), type, content: { label: "Continuar", buttonSize: "medium", buttonColor: "#181833" } };
+  if (type === "continue_button") return { id: uid("b"), type, content: { label: "Continuar", buttonSize: "medium", buttonColor: "" } };
   return { id: uid("b"), type: "divider", content: {} };
 }
 
@@ -712,6 +755,11 @@ function EditorApp() {
 }
 
 function CourseSettingsDialog({ course, onChange }: { course: Course; onChange: (mutator: (draft: Course) => void) => void }) {
+  const theme = courseTheme(course);
+  const setTheme = (key: keyof typeof defaultTheme, value: string) => onChange((draft) => {
+    draft.theme = draft.theme || {};
+    draft.theme[key] = value;
+  });
   return (
     <Dialog.Root>
       <Dialog.Trigger asChild>
@@ -721,7 +769,7 @@ function CourseSettingsDialog({ course, onChange }: { course: Course; onChange: 
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-ink/35" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(520px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white p-6 shadow-soft">
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[calc(100vh-32px)] w-[min(620px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl bg-white p-6 shadow-soft">
           <Dialog.Title className="text-2xl font-black tracking-[-0.03em] text-ink">Datos del curso</Dialog.Title>
           <Dialog.Description className="mt-2 text-sm leading-relaxed text-steel">
             Configura la informacion general. Despues puedes seguir editandola desde este panel.
@@ -731,6 +779,21 @@ function CourseSettingsDialog({ course, onChange }: { course: Course; onChange: 
             <TextField label="Descripcion" value={course.description} onChange={(value) => onChange((draft) => { draft.description = value; })} rows={4} />
             <Field label="Duracion estimada en minutos" type="number" value={String(Number(course.metadata?.durationMinutes) || estimateDuration(course))} onChange={(value) => onChange((draft) => { draft.metadata = draft.metadata || {}; draft.metadata.durationMinutes = Number(value) || estimateDuration(draft); })} />
             <Field label="Puntaje minimo" type="number" value={String(course.scorm?.passingScore || 70)} onChange={(value) => onChange((draft) => { draft.scorm = draft.scorm || {}; draft.scorm.passingScore = Number(value); })} />
+          </div>
+          <div className="mt-4 rounded-lg border border-line bg-[#fbfbff] p-4">
+            <h3 className="text-sm font-black uppercase tracking-[0.12em] text-violet">Tema del curso</h3>
+            <div className="mt-3 grid gap-3">
+              <div className="flex flex-wrap gap-3">
+                <HexColorField label="Principal" value={theme.primaryColor} onChange={(value) => setTheme("primaryColor", value)} />
+                <HexColorField label="Acento" value={theme.accentColor} onChange={(value) => setTheme("accentColor", value)} />
+                <HexColorField label="Texto" value={theme.inkColor} onChange={(value) => setTheme("inkColor", value)} />
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <HexColorField label="Fondo" value={theme.backgroundColor} onChange={(value) => setTheme("backgroundColor", value)} />
+                <HexColorField label="Botones" value={theme.buttonColor} onChange={(value) => setTheme("buttonColor", value)} />
+                <SelectField label="Fuente" value={theme.fontFamily} onChange={(value) => setTheme("fontFamily", value)} options={[["inter", "Inter"], ["system", "Sistema"], ["serif", "Serif elegante"]]} />
+              </div>
+            </div>
           </div>
           <div className="mt-6 flex justify-end">
             <Dialog.Close asChild>
@@ -1365,7 +1428,7 @@ function continueButtonClass(size = "medium") {
 }
 
 function ContinueButtonPreview({ content, disabled = false, onClick }: { content: Record<string, any>; disabled?: boolean; onClick?: () => void }) {
-  const color = /^#[0-9a-fA-F]{6}$/.test(content.buttonColor || "") ? content.buttonColor : "#181833";
+  const color = /^#[0-9a-fA-F]{6}$/.test(content.buttonColor || "") ? content.buttonColor : "var(--ps-button, #181833)";
   return <div className="py-3 text-center"><button disabled={disabled} onClick={onClick} style={{ backgroundColor: color }} className={`rounded-md py-2.5 text-sm font-extrabold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-50 ${continueButtonClass(content.buttonSize)}`}>{content.label || "Continuar"}</button></div>;
 }
 
@@ -1581,12 +1644,12 @@ function PreviewApp() {
   }
 
   return (
-    <div className="grid min-h-screen grid-cols-[260px_1fr] bg-white">
+    <div className="grid min-h-screen grid-cols-[260px_1fr]" style={{ ...courseThemeStyle(course), background: "var(--ps-bg)", color: "var(--ps-ink)" }}>
       <aside className="sticky top-0 h-screen overflow-y-auto border-r border-line bg-white">
-        <div className="bg-gradient-to-br from-plum to-ink p-6 text-white"><p className="text-[11px] font-black uppercase tracking-[0.12em]">Course preview</p><h1 className="mt-5 text-2xl font-black">{course.title}</h1><p className="mt-6 text-xs font-black">CURSO {totalProgress}%</p><div className="mt-3 h-1 bg-white/35"><i className="block h-full bg-white" style={{ width: `${totalProgress}%` }} /></div><p className="mt-5 text-xs font-black">UNIDAD {unitProgress}%</p><div className="mt-3 h-1 bg-white/35"><i className="block h-full bg-violet" style={{ width: `${unitProgress}%` }} /></div></div>
+        <div className="p-6 text-white" style={{ background: "linear-gradient(rgba(24,24,51,.18), rgba(24,24,51,.38)), linear-gradient(135deg, var(--ps-primary), var(--ps-accent))" }}><p className="text-[11px] font-black uppercase tracking-[0.12em]">Course preview</p><h1 className="mt-5 text-2xl font-black">{course.title}</h1><p className="mt-6 text-xs font-black">CURSO {totalProgress}%</p><div className="mt-3 h-1 bg-white/35"><i className="block h-full bg-white" style={{ width: `${totalProgress}%` }} /></div><p className="mt-5 text-xs font-black">UNIDAD {unitProgress}%</p><div className="mt-3 h-1 bg-white/35"><i className="block h-full" style={{ width: `${unitProgress}%`, backgroundColor: "var(--ps-primary)" }} /></div></div>
         <nav className="grid gap-1.5 p-4">{course.lessons.map((item, index) => <button key={item.id} onClick={() => setLessonIndex(index)} className={`grid grid-cols-[24px_1fr_auto] items-center gap-2 rounded-md px-2.5 py-2 text-left ${index === lessonIndex ? "bg-mist" : ""}`}><span className="grid size-5 place-items-center rounded-full border border-line text-xs font-bold">{index + 1}</span><strong className="truncate text-sm">{item.title}</strong><small className="text-[11px] font-bold text-steel">{index <= lessonIndex ? "Disponible" : "Bloqueada"}</small></button>)}</nav>
       </aside>
-      <main className="p-8"><a className="mb-7 inline-flex rounded-md border border-line px-4 py-2 text-sm font-extrabold" href={`${appRoute("/")}?course=${course.id}`}>Volver al editor</a><section className="mx-auto max-w-5xl"><p className="text-xs font-black uppercase tracking-[0.12em] text-violet">Unidad {lessonIndex + 1} de {course.lessons.length}</p><h2 className="mb-7 text-4xl font-black tracking-[-0.04em]">{lesson.title}</h2><div className="grid gap-6">{lesson.blocks.map((block, index) => {
+      <main className="p-8"><a className="mb-7 inline-flex rounded-md border border-line px-4 py-2 text-sm font-extrabold" href={`${appRoute("/")}?course=${course.id}`}>Volver al editor</a><section className="mx-auto max-w-5xl"><p className="text-xs font-black uppercase tracking-[0.12em]" style={{ color: "var(--ps-primary)" }}>Unidad {lessonIndex + 1} de {course.lessons.length}</p><h2 className="mb-7 text-4xl font-black tracking-[-0.04em]">{lesson.title}</h2><div className="grid gap-6">{lesson.blocks.map((block, index) => {
         if (map[index] > revealedScreen) return null;
         if (block.type === "continue_button") {
           if (map[index] !== revealedScreen || revealedScreen >= screenCount(lesson) - 1) return null;
@@ -1594,7 +1657,7 @@ function PreviewApp() {
           return <FadeInOnView key={block.id}><BlockContentFrame block={block}><ContinueButtonPreview content={block.content} disabled={!enabled} onClick={revealNext} /></BlockContentFrame></FadeInOnView>;
         }
         return <FadeInOnView key={block.id}><BlockContentFrame block={block}><BlockPreview block={block} onQuizStatusChange={(id, correct) => setCorrectQuestions((current) => ({ ...current, [id]: correct }))} /></BlockContentFrame></FadeInOnView>;
-      })}</div>{revealedScreen >= screenCount(lesson) - 1 && lessonIndex < course.lessons.length - 1 ? <div className="mt-8 text-center"><button disabled={!canFinishLesson()} onClick={() => canFinishLesson() && setLessonIndex(lessonIndex + 1)} className="w-full max-w-sm rounded-md bg-ink px-5 py-3 font-extrabold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-50">Ir a la siguiente unidad</button></div> : null}</section></main>
+      })}</div>{revealedScreen >= screenCount(lesson) - 1 && lessonIndex < course.lessons.length - 1 ? <div className="mt-8 text-center"><button disabled={!canFinishLesson()} onClick={() => canFinishLesson() && setLessonIndex(lessonIndex + 1)} className="w-full max-w-sm rounded-md px-5 py-3 font-extrabold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-50" style={{ backgroundColor: "var(--ps-button)" }}>Ir a la siguiente unidad</button></div> : null}</section></main>
     </div>
   );
 }
