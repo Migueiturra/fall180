@@ -30,6 +30,7 @@ import {
   Save,
   Search,
   Settings,
+  SlidersHorizontal,
   Trash2,
   Upload,
   Video
@@ -331,6 +332,25 @@ function blockAlignClass(content: Record<string, any>) {
   if (value === "center") return "text-center";
   if (value === "right") return "text-right";
   return "text-left";
+}
+
+function blockRadiusClass(content: Record<string, any>) {
+  const value = content.blockRadius || "medium";
+  if (value === "none") return "rounded-none";
+  if (value === "small") return "rounded-sm";
+  if (value === "large") return "rounded-lg";
+  return "rounded-md";
+}
+
+function blockBorderClass(content: Record<string, any>) {
+  return content.blockBorder ? "border border-line" : "";
+}
+
+function blockShadowClass(content: Record<string, any>) {
+  const value = content.blockShadow || "none";
+  if (value === "small") return "shadow-sm";
+  if (value === "soft") return "shadow-soft";
+  return "";
 }
 
 function blockScreenMap(lesson: Lesson) {
@@ -886,13 +906,26 @@ function BlockShell({ block, editing, onEdit, onSave, onDuplicate, onMove, onDel
 function BlockLayoutControls({ block, onChange }: { block: CourseBlock; onChange: (patch: Record<string, any>) => void }) {
   const content = block.content;
   return (
-    <div className="flex flex-wrap items-center gap-3 border-b border-line bg-[#fbfbff] px-3 py-2">
-      <SegmentedControl label="Padding" value={content.blockPadding || "medium"} options={[["none", "Ninguno"], ["small", "Peq."], ["medium", "Med."], ["large", "Grande"]]} onChange={(value) => onChange({ blockPadding: value })} />
-      <SegmentedControl label="Ancho" value={content.contentWidth || "m"} options={[["s", "S"], ["m", "M"], ["l", "L"]]} onChange={(value) => onChange({ contentWidth: value })} />
-      <SegmentedControl label="Alinear" value={content.blockAlign || "left"} options={[["left", "Izq."], ["center", "Centro"], ["right", "Der."]]} onChange={(value) => onChange({ blockAlign: value })} />
-      {isQuestionType(block.type) ? <SegmentedControl label="Obligatorio" value={content.required === false ? "no" : "yes"} options={[["yes", "Si"], ["no", "No"]]} onChange={(value) => onChange({ required: value === "yes" })} /> : null}
-      <HexColorField label="Fondo" value={content.blockBackground || ""} onChange={(value) => onChange({ blockBackground: value })} allowEmpty />
-    </div>
+    <details className="border-b border-line bg-[#fbfbff]" open>
+      <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-violet [&::-webkit-details-marker]:hidden">
+        <SlidersHorizontal size={14} />
+        Propiedades del bloque
+      </summary>
+      <div className="grid gap-3 px-3 pb-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <SegmentedControl label="Padding" value={content.blockPadding || "medium"} options={[["none", "Ninguno"], ["small", "Peq."], ["medium", "Med."], ["large", "Grande"]]} onChange={(value) => onChange({ blockPadding: value })} />
+          <SegmentedControl label="Ancho" value={content.contentWidth || "m"} options={[["s", "S"], ["m", "M"], ["l", "L"]]} onChange={(value) => onChange({ contentWidth: value })} />
+          <SegmentedControl label="Alinear" value={content.blockAlign || "left"} options={[["left", "Izq."], ["center", "Centro"], ["right", "Der."]]} onChange={(value) => onChange({ blockAlign: value })} />
+          {isQuestionType(block.type) ? <SegmentedControl label="Obligatorio" value={content.required === false ? "no" : "yes"} options={[["yes", "Si"], ["no", "No"]]} onChange={(value) => onChange({ required: value === "yes" })} /> : null}
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <SegmentedControl label="Borde" value={content.blockBorder ? "yes" : "no"} options={[["no", "No"], ["yes", "Si"]]} onChange={(value) => onChange({ blockBorder: value === "yes" })} />
+          <SegmentedControl label="Radio" value={content.blockRadius || "medium"} options={[["none", "0"], ["small", "4"], ["medium", "6"], ["large", "8"]]} onChange={(value) => onChange({ blockRadius: value })} />
+          <SegmentedControl label="Sombra" value={content.blockShadow || "none"} options={[["none", "No"], ["small", "S"], ["soft", "M"]]} onChange={(value) => onChange({ blockShadow: value })} />
+          <HexColorField label="Fondo" value={content.blockBackground || ""} onChange={(value) => onChange({ blockBackground: value })} allowEmpty />
+        </div>
+      </div>
+    </details>
   );
 }
 
@@ -920,8 +953,9 @@ function SegmentedControl({ label, value, options, onChange }: { label: string; 
 
 function BlockContentFrame({ block, children }: { block: CourseBlock; children: React.ReactNode }) {
   const background = /^#[0-9a-fA-F]{6}$/.test(block.content.blockBackground || "") ? block.content.blockBackground : undefined;
+  const surfaceClass = `${blockRadiusClass(block.content)} ${blockBorderClass(block.content)} ${blockShadowClass(block.content)}`;
   return (
-    <div className={`${blockPaddingClass(block.content)} ${background ? "rounded-md" : ""}`} style={background ? { background } : undefined}>
+    <div className={`${blockPaddingClass(block.content)} ${surfaceClass}`} style={background ? { background } : undefined}>
       <div className={`w-full ${blockWidthClass(block.content)} ${blockAlignClass(block.content)} mx-auto`}>
         {children}
       </div>

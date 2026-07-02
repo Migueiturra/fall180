@@ -314,12 +314,15 @@
     var padding = layoutValue(content.blockPadding, ["none", "small", "medium", "large"], "medium");
     var width = layoutValue(content.contentWidth, ["s", "m", "l"], "m");
     var align = layoutValue(content.blockAlign, ["left", "center", "right"], "left");
-    return "block-layout block-padding-" + padding + " block-width-" + width + " block-align-" + align;
+    var radius = layoutValue(content.blockRadius, ["none", "small", "medium", "large"], "medium");
+    var shadow = layoutValue(content.blockShadow, ["none", "small", "soft"], "none");
+    var border = content.blockBorder ? " block-border" : "";
+    return "block-layout block-padding-" + padding + " block-width-" + width + " block-align-" + align + " block-radius-" + radius + " block-shadow-" + shadow + border;
   }
 
   function wrapBlock(block, html) {
     var content = block.content || {};
-    var background = /^#[0-9a-fA-F]{6}$/.test(content.blockBackground || "") ? ' style="background:' + escapeHtml(content.blockBackground) + ';border-radius:8px"' : "";
+    var background = /^#[0-9a-fA-F]{6}$/.test(content.blockBackground || "") ? ' style="background:' + escapeHtml(content.blockBackground) + '"' : "";
     return '<div class="' + blockLayoutClass(content) + '"' + background + '>' + html + '</div>';
   }
 
