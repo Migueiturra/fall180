@@ -644,7 +644,16 @@
     state.currentLessonIndex = index;
     closeMobileMenu();
     renderLesson();
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    scrollCourseToTop();
+  }
+
+  function scrollCourseToTop() {
+    window.requestAnimationFrame(function () {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      if (els.lesson) els.lesson.scrollIntoView({ behavior: "smooth", block: "start" });
+      var main = document.querySelector(".course-main");
+      if (main && typeof main.scrollTo === "function") main.scrollTo({ top: 0, behavior: "smooth" });
+    });
   }
 
   function closeMobileMenu() {

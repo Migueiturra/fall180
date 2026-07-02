@@ -1677,6 +1677,9 @@ function PreviewApp() {
   useEffect(() => {
     loadCourseById(getCourseId()).then(setCourse);
   }, []);
+  useEffect(() => {
+    window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
+  }, [lessonIndex]);
   if (!course) return <div className="grid min-h-screen place-items-center text-sm font-bold text-steel">Cargando vista previa...</div>;
   const lesson = course.lessons[lessonIndex] || course.lessons[0];
   const map = blockScreenMap(lesson);
