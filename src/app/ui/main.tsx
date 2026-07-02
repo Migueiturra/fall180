@@ -1060,15 +1060,17 @@ function CsvImportDialog({ open, importing, error, onClose, onImport }: { open: 
     <Dialog.Root open={open} onOpenChange={(value) => !value && onClose()}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-ink/35" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[calc(100vh-32px)] w-[min(860px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl bg-white p-6 shadow-soft">
-          <Dialog.Title className="text-2xl font-black tracking-[-0.03em] text-ink">Crear curso desde CSV</Dialog.Title>
-          <Dialog.Description className="mt-2 text-sm leading-relaxed text-steel">
-            Completa los datos principales, prepara el archivo con la plantilla y luego importalo para abrir el editor.
-          </Dialog.Description>
-          <form onSubmit={submit}>
-            <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-              <section className="rounded-lg border border-line bg-white p-4">
-                <h3 className="text-sm font-black uppercase tracking-[0.12em] text-violet">Datos del curso</h3>
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100vh-28px)] w-[min(940px,calc(100vw-28px))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-xl bg-white shadow-soft">
+          <div className="border-b border-line px-6 py-5">
+            <Dialog.Title className="text-2xl font-black tracking-[-0.03em] text-ink">Crear curso desde CSV</Dialog.Title>
+            <Dialog.Description className="mt-2 max-w-3xl text-sm leading-relaxed text-steel">
+              Completa los datos principales, revisa la plantilla y luego importa el archivo para abrir el curso en el editor.
+            </Dialog.Description>
+          </div>
+          <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
+            <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto overflow-x-hidden px-6 py-5 lg:grid-cols-[340px_minmax(0,1fr)]">
+              <section className="min-w-0 self-start rounded-lg border border-line bg-white p-4">
+                <h3 className="text-xs font-black uppercase tracking-[0.14em] text-violet">Datos del curso</h3>
                 <Field label="Titulo" value={details.title} onChange={(value) => setDetails((current) => ({ ...current, title: value }))} />
                 <TextField label="Descripcion" value={details.description} onChange={(value) => setDetails((current) => ({ ...current, description: value }))} rows={4} />
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -1077,23 +1079,29 @@ function CsvImportDialog({ open, importing, error, onClose, onImport }: { open: 
                 </div>
                 <label className="mt-4 grid gap-2 text-xs font-extrabold text-steel">
                   Archivo CSV
-                  <input type="file" accept=".csv,text/csv" onChange={(event) => setFile(event.target.files?.[0] || null)} className="rounded-md border border-line bg-white p-2 text-sm font-semibold text-ink" />
+                  <input type="file" accept=".csv,text/csv" onChange={(event) => setFile(event.target.files?.[0] || null)} className="w-full rounded-md border border-line bg-white p-2 text-sm font-semibold text-ink file:mr-3 file:rounded-md file:border-0 file:bg-mist file:px-3 file:py-1.5 file:text-xs file:font-black file:text-ink" />
                 </label>
-                {file ? <p className="mt-2 text-xs font-bold text-steel">Seleccionado: {file.name}</p> : null}
+                {file ? <p className="mt-2 truncate text-xs font-bold text-steel" title={file.name}>Seleccionado: {file.name}</p> : null}
               </section>
-              <section className="grid gap-4">
-                <div className="rounded-lg border border-line bg-[#fbfbff] p-4">
-                  <h3 className="text-sm font-black uppercase tracking-[0.12em] text-violet">Plantilla CSV</h3>
-                  <pre className="mt-3 max-h-52 overflow-auto rounded-md bg-ink p-3 text-xs leading-relaxed text-white">{csvTemplate}</pre>
+              <section className="grid min-w-0 gap-4">
+                <div className="min-w-0 rounded-lg border border-line bg-[#fbfbff] p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <h3 className="text-xs font-black uppercase tracking-[0.14em] text-violet">Plantilla CSV</h3>
+                    <span className="text-[11px] font-bold text-steel">Copia esta estructura exacta</span>
+                  </div>
+                  <pre className="mt-3 max-h-48 min-w-0 overflow-y-auto overflow-x-hidden whitespace-pre-wrap break-words rounded-md bg-ink p-3 text-[11px] leading-relaxed text-white">{csvTemplate}</pre>
                 </div>
-                <div className="rounded-lg border border-line bg-white p-4">
-                  <h3 className="text-sm font-black uppercase tracking-[0.12em] text-violet">Indicaciones para IA</h3>
-                  <textarea readOnly value={csvAiPrompt} className="mt-3 h-36 w-full resize-none rounded-md border border-line bg-mist p-3 text-xs font-semibold leading-relaxed text-ink" />
+                <div className="min-w-0 rounded-lg border border-line bg-white p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <h3 className="text-xs font-black uppercase tracking-[0.14em] text-violet">Indicaciones para IA</h3>
+                    <span className="text-[11px] font-bold text-steel">Prompt listo para pegar</span>
+                  </div>
+                  <textarea readOnly value={csvAiPrompt} className="mt-3 h-40 w-full min-w-0 resize-none overflow-y-auto rounded-md border border-line bg-mist p-3 text-xs font-semibold leading-relaxed text-ink" />
                 </div>
               </section>
             </div>
-            {currentError ? <div className="mt-4 rounded-md border border-red-100 bg-red-50 p-3 text-sm font-bold text-red-700">{currentError}</div> : null}
-            <div className="mt-5 flex justify-end gap-2">
+            {currentError ? <div className="mx-6 mb-4 rounded-md border border-red-100 bg-red-50 p-3 text-sm font-bold text-red-700">{currentError}</div> : null}
+            <div className="flex justify-end gap-2 border-t border-line px-6 py-4">
               <button type="button" onClick={onClose} className="rounded-md border border-line px-4 py-2 text-sm font-extrabold">Cancelar</button>
               <button type="submit" disabled={importing} className="rounded-md bg-ink px-4 py-2 text-sm font-extrabold text-white disabled:opacity-50">
                 {importing ? "Importando..." : "Importar y editar"}
