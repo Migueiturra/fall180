@@ -474,6 +474,44 @@ function csvBoolean(value = "") {
   return ["si", "s", "yes", "true", "1", "obligatorio"].includes(normalizeCsvKey(value));
 }
 
+function splitCsvPair(value: string, delimiters = ["=>", "="]) {
+  for (const delimiter of delimiters) {
+    const index = value.indexOf(delimiter);
+    if (index >= 0) return [value.slice(0, index).trim(), value.slice(index + delimiter.length).trim()];
+  }
+  const colonIndex = value.indexOf(":");
+  if (colonIndex >= 0) return [value.slice(0, colonIndex).trim(), value.slice(colonIndex + 1).trim()];
+  return [value.trim(), ""];
+}
+
+function csvNumber(value: string | undefined, fallback: number) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function csvHex(value: string | undefined, fallback: string) {
+  return /^#[0-9a-fA-F]{6}$/.test(value || "") ? String(value) : fallback;
+}
+
+function csvBlockLayout(row: Record<string, string>) {
+  const patch: Record<string, any> = {};
+  const padding = normalizeCsvKey(row.padding || "");
+  const width = normalizeCsvKey(row.ancho || row.width || "");
+  const align = normalizeCsvKey(row.alinear || row.alineacion || row.align || "");
+  if (["none", "ninguno", "sin"].includes(padding)) patch.blockPadding = "none";
+  if (["small", "pequeno", "pequena", "s"].includes(padding)) patch.blockPadding = "small";
+  if (["medium", "mediano", "media", "m"].includes(padding)) patch.blockPadding = "medium";
+  if (["large", "grande", "l"].includes(padding)) patch.blockPadding = "large";
+  if (["s", "small", "pequeno"].includes(width)) patch.contentWidth = "s";
+  if (["m", "medium", "mediano"].includes(width)) patch.contentWidth = "m";
+  if (["l", "large", "grande"].includes(width)) patch.contentWidth = "l";
+  if (["left", "izquierda", "izq"].includes(align)) patch.blockAlign = "left";
+  if (["center", "centro", "centrado"].includes(align)) patch.blockAlign = "center";
+  if (["right", "derecha", "der"].includes(align)) patch.blockAlign = "right";
+  if (/^#[0-9a-fA-F]{6}$/.test(row.color_fondo || row.fondo || "")) patch.blockBackground = row.color_fondo || row.fondo;
+  return patch;
+}
+
 function csvBlockType(value = ""): BlockType {
   const type = normalizeCsvKey(value);
   if (["titulo", "heading", "h1", "encabezado"].includes(type)) return "heading";
@@ -500,35 +538,57 @@ function blockFromCsvRow(row: Record<string, string>): CourseBlock {
   const type = csvBlockType(row.tipo || row.bloque || row.block_type);
   const title = row.titulo || row.title || "";
   const content = row.contenido || row.texto || row.body || "";
-  const options = splitCsvList(row.opciones || row.alternativas || row.items);
+  const extra = row.extra || row.config || "";
+  const options = splitCsvList(row.opciones || row.alternativas || row.items || extra);
   const answer = row.respuesta_correcta || row.correcta || row.answer || "";
   const required = row.obligatorio ? csvBoolean(row.obligatorio) : true;
+  const layout = csvBlockLayout(row);
+  const imageUrl = row.imagen || row.image || row.url_imagen || row.image_url || "";
 
-  if (type === "heading") return { id: uid("b"), type, content: { text: content || title || "Nuevo titulo", textHtml: content || title || "Nuevo titulo" } };
-  if (type === "paragraph") return { id: uid("b"), type, content: { text: content || "Escribe aqui el contenido.", textHtml: content || "Escribe aqui el contenido." } };
-  if (type === "statement") return { id: uid("b"), type, content: { text: content || title, textHtml: content || title, showDivider: true, width: "normal" } };
-  if (type === "list") return { id: uid("b"), type, content: { title, listStyle: normalizeCsvKey(row.tipo || "").includes("numerada") ? "number" : "bullet", items: options.length ? options : splitCsvList(content), itemsHtml: options.length ? options : splitCsvList(content) } };
-  if (type === "accordion") return { id: uid("b"), type, content: { title: title || "Acordeon", items: (options.length ? options : splitCsvList(content)).map((item) => ({ title: item.split(":")[0] || "Item", text: item.split(":").slice(1).join(":") || item })) } };
-  if (type === "embed") return { id: uid("b"), type, content: { title: title || "Video o recurso embebido", url: content, caption: row.bajada || "", size: "wide", aspectRatio: "16 / 9", hasFrame: true } };
-  if (type === "custom_html") return { id: uid("b"), type, content: { title: title || "HTML", html: content, htmlSizing: "auto", htmlHeight: 420, htmlWidthMode: "full", htmlWidth: 600, htmlAlign: "center", htmlVerticalAlign: "center", enableTailwind: true, hasFrame: true } };
-  if (type === "continue_button") return { id: uid("b"), type, content: { label: title || content || "Continuar", buttonSize: "medium", buttonColor: "" } };
+  if (type === "heading") return { id: uid("b"), type, content: { ...layout, text: content || title || "Nuevo titulo", textHtml: content || title || "Nuevo titulo" } };
+  if (type === "paragraph") return { id: uid("b"), type, content: { ...layout, text: content || "Escribe aqui el contenido.", textHtml: content || "Escribe aqui el contenido." } };
+  if (type === "statement") return { id: uid("b"), type, content: { ...layout, text: content || title, textHtml: content || title, showDivider: true, width: "normal" } };
+  if (type === "image_text") return { id: uid("b"), type, content: { ...layout, imageUrl: imageUrl || content, imageAlt: row.alt || title || "Imagen", imageSize: csvNumber(row.tamano_imagen || row.image_size, 180), title, text: row.texto || row.descripcion || "", textHtml: row.texto || row.descripcion || "" } };
+  if (type === "image_gallery") {
+    const images = splitCsvList(imageUrl || content || extra).map((url) => ({ url, alt: row.alt || title || "Imagen" }));
+    return { id: uid("b"), type, content: { ...layout, title: title || "Imagen", images: images.length ? images : [{ url: "", alt: "Imagen" }], imageHeight: csvNumber(row.alto || row.image_height, 360), hasFrame: !row.marco || csvBoolean(row.marco) } };
+  }
+  if (type === "flip_cards") {
+    const cardItems = (options.length ? options : splitCsvList(content)).map((item) => {
+      const [front, back] = splitCsvPair(item);
+      return { front, frontHtml: front, back: back || "Texto reverso", backHtml: back || "Texto reverso", frontColor: csvHex(row.color_frente, "#ffffff"), backColor: csvHex(row.color_reverso || row.color_fondo, "#181833") };
+    });
+    return { id: uid("b"), type, content: { ...layout, title: title || "Tarjetas", columns: Math.min(3, Math.max(1, csvNumber(row.columnas, Math.min(3, cardItems.length || 1)))), cardHeight: csvNumber(row.alto, 230), frontTextSize: csvNumber(row.tamano_frente, 22), backTextSize: csvNumber(row.tamano_reverso, 15), cards: cardItems.length ? cardItems : defaultBlock("flip_cards").content.cards } };
+  }
+  if (type === "tabs") {
+    const tabItems = (options.length ? options : splitCsvList(content)).slice(0, 6).map((item, index) => {
+      const [label, body] = splitCsvPair(item);
+      return { label: label || `Tab ${index + 1}`, body: body || "Contenido", bodyHtml: body || "Contenido" };
+    });
+    return { id: uid("b"), type, content: { ...layout, title: title || "Tabs", accentColor: csvHex(row.color_acento, "#4b0f78"), tabBackground: csvHex(row.color_tabs, "#f7f7fa"), panelBackground: csvHex(row.color_panel || row.color_fondo, "#ffffff"), items: tabItems.length ? tabItems : defaultBlock("tabs").content.items } };
+  }
+  if (type === "list") return { id: uid("b"), type, content: { ...layout, title, listStyle: normalizeCsvKey(row.tipo || row.estilo_lista || "").includes("numerada") ? "number" : "bullet", items: options.length ? options : splitCsvList(content), itemsHtml: options.length ? options : splitCsvList(content) } };
+  if (type === "accordion") return { id: uid("b"), type, content: { ...layout, title: title || "Acordeon", items: (options.length ? options : splitCsvList(content)).map((item) => { const [itemTitle, itemText] = splitCsvPair(item); return { title: itemTitle || "Item", text: itemText || item }; }) } };
+  if (type === "embed") return { id: uid("b"), type, content: { ...layout, title: title || "Video o recurso embebido", url: content || row.url || imageUrl, caption: row.bajada || "", size: "wide", aspectRatio: row.aspect_ratio || "16 / 9", hasFrame: !row.marco || csvBoolean(row.marco) } };
+  if (type === "custom_html") return { id: uid("b"), type, content: { ...layout, title: title || "HTML", html: content, htmlSizing: row.alto ? "fixed" : "auto", htmlHeight: csvNumber(row.alto, 420), htmlWidthMode: row.ancho_px ? "fixed" : "full", htmlWidth: csvNumber(row.ancho_px, 600), htmlAlign: row.html_align || "center", htmlVerticalAlign: row.html_vertical || "center", enableTailwind: true, hasFrame: !row.marco || csvBoolean(row.marco) } };
+  if (type === "continue_button") return { id: uid("b"), type, content: { ...layout, label: title || content || "Continuar", buttonSize: row.tamano || "medium", buttonColor: csvHex(row.color_boton, "") } };
   if (type === "divider") return { id: uid("b"), type, content: {} };
   if (type === "quiz_single_choice") {
     const correctAnswer = Math.max(0, options.findIndex((option) => normalizeCsvKey(option) === normalizeCsvKey(answer)));
-    return { id: uid("b"), type, content: { question: title || content || "Pregunta", options: options.length ? options : ["Alternativa correcta", "Alternativa incorrecta"], correctAnswer, required, feedbackCorrect: "Correcto.", feedbackIncorrect: "Revisa la respuesta." } };
+    return { id: uid("b"), type, content: { ...layout, question: title || content || "Pregunta", options: options.length ? options : ["Alternativa correcta", "Alternativa incorrecta"], correctAnswer, required, feedbackCorrect: "Correcto.", feedbackIncorrect: "Revisa la respuesta." } };
   }
   if (type === "quiz_multiple_response") {
     const answers = splitCsvList(answer).map(normalizeCsvKey);
     const correctAnswers = options.map((option, index) => answers.includes(normalizeCsvKey(option)) ? index : -1).filter((index) => index >= 0);
-    return { id: uid("b"), type, content: { question: title || content || "Pregunta", options: options.length ? options : ["Respuesta correcta", "Otra respuesta", "Distractor"], correctAnswers, required, feedbackCorrect: "Correcto.", feedbackIncorrect: "Revisa las alternativas." } };
+    return { id: uid("b"), type, content: { ...layout, question: title || content || "Pregunta", options: options.length ? options : ["Respuesta correcta", "Otra respuesta", "Distractor"], correctAnswers, required, feedbackCorrect: "Correcto.", feedbackIncorrect: "Revisa las alternativas." } };
   }
-  if (type === "quiz_fill_blank") return { id: uid("b"), type, content: { question: title || "Completa la frase", prompt: content, answers: splitCsvList(answer), caseSensitive: false, required, feedbackCorrect: "Correcto.", feedbackIncorrect: "Revisa la respuesta." } };
+  if (type === "quiz_fill_blank") return { id: uid("b"), type, content: { ...layout, question: title || "Completa la frase", prompt: content, answers: splitCsvList(answer), caseSensitive: false, required, feedbackCorrect: "Correcto.", feedbackIncorrect: "Revisa la respuesta." } };
   if (type === "quiz_matching") {
     const pairs = (options.length ? options : splitCsvList(content)).map((item) => {
-      const [prompt, ...match] = item.split("=");
-      return { prompt: prompt || "Concepto", match: match.join("=") || item };
+      const [prompt, match] = splitCsvPair(item, ["=>", "="]);
+      return { prompt: prompt || "Concepto", match: match || item };
     });
-    return { id: uid("b"), type, content: { question: title || "Relaciona cada concepto", pairs, required, feedbackCorrect: "Correcto.", feedbackIncorrect: "Revisa las coincidencias." } };
+    return { id: uid("b"), type, content: { ...layout, question: title || "Relaciona cada concepto", pairs, required, feedbackCorrect: "Correcto.", feedbackIncorrect: "Revisa las coincidencias." } };
   }
   return defaultBlock(type);
 }
