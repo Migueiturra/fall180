@@ -16,6 +16,8 @@
     lesson: document.getElementById("lesson-container"),
     prev: document.getElementById("prev-button"),
     next: document.getElementById("next-button"),
+    menuButton: document.getElementById("mobile-menu-button"),
+    menuBackdrop: document.getElementById("mobile-menu-backdrop"),
     progressLabel: document.getElementById("progress-label"),
     progressBar: document.getElementById("progress-bar")
   };
@@ -381,6 +383,23 @@
         '</article>';
     }
 
+    if (block.type === "tabs") {
+      var tabItems = (block.content.items || []).slice(0, 6);
+      var accent = safeHexColor(block.content.accentColor, "#4b0f78");
+      var tabBackground = safeHexColor(block.content.tabBackground, "#f7f7fa");
+      var panelBackground = safeHexColor(block.content.panelBackground, "#ffffff");
+      var tabs = tabItems.map(function (item, index) {
+        return '<button class="tabs-button' + (index === 0 ? " active" : "") + '" type="button" data-tab-index="' + index + '" style="--tab-accent:' + escapeHtml(accent) + ';--tab-bg:' + escapeHtml(tabBackground) + ';--panel-bg:' + escapeHtml(panelBackground) + '">' + escapeHtml(item.label || ("Tab " + (index + 1))) + '</button>';
+      }).join("");
+      var panels = tabItems.map(function (item, index) {
+        return '<div class="tabs-panel rich-output' + (index === 0 ? " active" : "") + '" data-tab-panel="' + index + '" style="background:' + escapeHtml(panelBackground) + '">' + sanitizeRichHtml(item.bodyHtml || escapeHtml(item.body || "")) + '</div>';
+      }).join("");
+      return '<article class="block tabs-block reveal-block">' +
+        (block.content.title ? '<strong class="media-title">' + escapeHtml(block.content.title) + '</strong>' : '') +
+        '<div class="tabs-shell" data-tabs-block><div class="tabs-list" style="background:' + escapeHtml(tabBackground) + '">' + tabs + '</div>' + panels + '</div>' +
+        '</article>';
+    }
+
     if (block.type === "accordion") {
       var items = (block.content.items || []).map(function (item) {
         return '<details class="accordion-item"><summary>' + escapeHtml(item.title || "") + '</summary><p>' + escapeHtml(item.text || "") + '</p></details>';
@@ -591,11 +610,31 @@
   function moveToLesson(index) {
     if (index < 0 || index >= state.course.lessons.length || index > state.unlockedLessonIndex) return;
     state.currentLessonIndex = index;
+    closeMobileMenu();
     renderLesson();
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function closeMobileMenu() {
+    document.body.classList.remove("mobile-menu-open");
+    if (els.menuButton) els.menuButton.setAttribute("aria-expanded", "false");
+  }
+
+  function toggleMobileMenu() {
+    var open = !document.body.classList.contains("mobile-menu-open");
+    document.body.classList.toggle("mobile-menu-open", open);
+    if (els.menuButton) els.menuButton.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+
   function bindEvents() {
+    if (els.menuButton) {
+      els.menuButton.addEventListener("click", toggleMobileMenu);
+    }
+
+    if (els.menuBackdrop) {
+      els.menuBackdrop.addEventListener("click", closeMobileMenu);
+    }
+
     els.prev.addEventListener("click", function () {
       moveToLesson(state.currentLessonIndex - 1);
     });
@@ -614,6 +653,19 @@
       var flipCard = event.target.closest("[data-flip-card]");
       if (flipCard) {
         flipCard.classList.toggle("flipped");
+        return;
+      }
+
+      var tabButton = event.target.closest("[data-tab-index]");
+      if (tabButton) {
+        var tabsBlock = tabButton.closest("[data-tabs-block]");
+        var tabIndex = tabButton.getAttribute("data-tab-index");
+        Array.prototype.slice.call(tabsBlock.querySelectorAll("[data-tab-index]")).forEach(function (button) {
+          button.classList.toggle("active", button.getAttribute("data-tab-index") === tabIndex);
+        });
+        Array.prototype.slice.call(tabsBlock.querySelectorAll("[data-tab-panel]")).forEach(function (panel) {
+          panel.classList.toggle("active", panel.getAttribute("data-tab-panel") === tabIndex);
+        });
         return;
       }
 

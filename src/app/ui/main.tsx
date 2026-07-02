@@ -52,6 +52,7 @@ type BlockType =
   | "image_gallery"
   | "statement"
   | "flip_cards"
+  | "tabs"
   | "accordion"
   | "list"
   | "embed"
@@ -105,6 +106,7 @@ const blockTools: Array<{ type: BlockType; label: string; icon: React.ReactNode 
   { type: "image_gallery", label: "Solo imagen", icon: <GalleryHorizontalEnd size={15} /> },
   { type: "statement", label: "Statement", icon: <Copy size={15} /> },
   { type: "flip_cards", label: "Tarjetas", icon: <MousePointerClick size={15} /> },
+  { type: "tabs", label: "Tabs", icon: <LayoutDashboard size={15} /> },
   { type: "accordion", label: "Acordeon", icon: <RowsIcon /> },
   { type: "list", label: "Lista", icon: <List size={15} /> },
   { type: "embed", label: "Embed", icon: <Video size={15} /> },
@@ -120,7 +122,7 @@ const blockTools: Array<{ type: BlockType; label: string; icon: React.ReactNode 
 const blockToolGroups: Array<{ title: string; tools: BlockType[]; defaultOpen?: boolean }> = [
   { title: "Texto", tools: ["heading", "paragraph", "statement", "list", "divider"], defaultOpen: true },
   { title: "Media", tools: ["image_text", "image_gallery", "embed", "custom_html"], defaultOpen: true },
-  { title: "Interaccion", tools: ["flip_cards", "accordion", "continue_button"] },
+  { title: "Interaccion", tools: ["flip_cards", "tabs", "accordion", "continue_button"] },
   { title: "Evaluacion", tools: ["quiz_single_choice", "quiz_multiple_response", "quiz_fill_blank", "quiz_matching"] }
 ];
 
@@ -362,6 +364,7 @@ function defaultBlock(type: BlockType): CourseBlock {
   if (type === "image_gallery") return { id: uid("b"), type, content: { title: "Imagen", images: [{ url: "assets/demo-learning.svg", alt: "Imagen" }], imageHeight: 360, hasFrame: true } };
   if (type === "statement") return { id: uid("b"), type, content: { text: "You're the master of your life. Steer it with intention.", textHtml: "You're the master of your life. Steer it with intention.", showDivider: true, width: "normal" } };
   if (type === "flip_cards") return { id: uid("b"), type, content: { title: "Tarjetas interactivas", columns: 3, cardHeight: 230, frontTextSize: 22, backTextSize: 15, cards: [{ front: "Concepto", frontHtml: "Concepto", back: "Texto que aparece al hacer clic.", backHtml: "Texto que aparece al hacer clic.", frontColor: "#ffffff", backColor: "#181833" }, { front: "Idea clave", frontHtml: "Idea clave", back: "Otra explicacion breve.", backHtml: "Otra explicacion breve.", frontColor: "#ffffff", backColor: "#3C3C59" }, { front: "Aplicacion", frontHtml: "Aplicacion", back: "Piensa como se ve esto en una situacion real.", backHtml: "Piensa como se ve esto en una situacion real.", frontColor: "#ffffff", backColor: "#8182F2" }] } };
+  if (type === "tabs") return { id: uid("b"), type, content: { title: "Contenidos del modulo", accentColor: "#4b0f78", tabBackground: "#f7f7fa", panelBackground: "#ffffff", items: [{ label: "1. Entornos de trabajo saludables", body: "Identificar los componentes clave de un entorno de trabajo saludable.", bodyHtml: "Identificar los componentes clave de un entorno de trabajo saludable." }, { label: "2. Cultura y clima de seguridad", body: "Distinguir entre cultura y clima de seguridad y su impacto en la prevencion.", bodyHtml: "Distinguir entre cultura y clima de seguridad y su impacto en la prevencion." }] } };
   if (type === "accordion") return { id: uid("b"), type, content: { title: "Acordeon", items: [{ title: "Pregunta o tema", text: "Contenido desplegable." }, { title: "Otro tema", text: "Mas informacion." }] } };
   if (type === "list") return { id: uid("b"), type, content: { title: "Lista", listStyle: "bullet", items: ["Primer punto", "Segundo punto", "Tercer punto"] } };
   if (type === "embed") return { id: uid("b"), type, content: { title: "Video o recurso embebido", url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", caption: "", size: "wide", aspectRatio: "16 / 9", hasFrame: true } };
@@ -1014,6 +1017,7 @@ function BlockForm({ block, onChange }: { block: CourseBlock; onChange: (content
   if (block.type === "image_text") return <div className="grid gap-4"><Field label="URL imagen" value={c.imageUrl || ""} onChange={(value) => patch({ imageUrl: value })} /><Field label="Tamano imagen px" type="number" value={String(c.imageSize || 180)} onChange={(value) => patch({ imageSize: Number(value) || 180 })} /><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} /><RichTextarea label="Texto" value={rich(c, "text")} onChange={(html) => patch({ textHtml: html, text: htmlToText(html) })} /></div>;
   if (block.type === "image_gallery") return <ImageGalleryForm content={c} onChange={patch} />;
   if (block.type === "flip_cards") return <FlipCardsForm content={c} onChange={patch} />;
+  if (block.type === "tabs") return <TabsForm content={c} onChange={patch} />;
   if (block.type === "accordion") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} />{(c.items || []).map((item: any, index: number) => <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2"><Field label={`Item ${index + 1}`} value={item.title || ""} onChange={(value) => { const items = [...(c.items || [])]; items[index] = { ...item, title: value }; patch({ items }); }} /><Field label="Texto" value={item.text || ""} onChange={(value) => { const items = [...(c.items || [])]; items[index] = { ...item, text: value }; patch({ items }); }} /><button className="mt-6 grid size-10 place-items-center rounded-md text-red-600 hover:bg-red-50" onClick={() => patch({ items: (c.items || []).filter((_: any, i: number) => i !== index) })}><Trash2 size={15} /></button></div>)}<button className="w-fit rounded-md bg-mist px-3 py-2 text-sm font-extrabold" onClick={() => patch({ items: [...(c.items || []), { title: "Nuevo item", text: "Contenido" }] })}>Agregar item</button></div>;
   if (block.type === "list") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} /><SelectField label="Tipo" value={c.listStyle || "bullet"} onChange={(value) => patch({ listStyle: value })} options={[["bullet", "Puntos"], ["number", "1, 2, 3"]]} /><TextField label="Items, uno por linea" value={(c.items || []).join("\n")} onChange={(value) => patch({ items: linesToItems(value) })} rows={6} /></div>;
   if (block.type === "embed") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} /><Field label="URL" value={c.url || ""} onChange={(value) => patch({ url: value })} /><Field label="Bajada" value={c.caption || ""} onChange={(value) => patch({ caption: value })} /></div>;
@@ -1094,6 +1098,36 @@ function FlipCardsForm({ content, onChange }: { content: Record<string, any>; on
   );
 }
 
+function TabsForm({ content, onChange }: { content: Record<string, any>; onChange: (patch: Record<string, any>) => void }) {
+  const items = content.items?.length ? content.items.slice(0, 6) : [{ label: "Nuevo tab", body: "Contenido del tab", bodyHtml: "Contenido del tab" }];
+
+  function updateItem(index: number, patch: Record<string, any>) {
+    const next = items.map((item: any, itemIndex: number) => itemIndex === index ? { ...item, ...patch } : item);
+    onChange({ items: next });
+  }
+
+  return (
+    <div className="grid gap-5">
+      <Field label="Titulo opcional" value={content.title || ""} onChange={(value) => onChange({ title: value })} />
+      <div className="grid gap-3 md:grid-cols-3">
+        <HexColorField label="Color activo" value={content.accentColor || "#4b0f78"} onChange={(value) => onChange({ accentColor: value })} />
+        <HexColorField label="Fondo tabs" value={content.tabBackground || "#f7f7fa"} onChange={(value) => onChange({ tabBackground: value })} />
+        <HexColorField label="Fondo panel" value={content.panelBackground || "#ffffff"} onChange={(value) => onChange({ panelBackground: value })} />
+      </div>
+      {items.map((item: any, index: number) => (
+        <section key={index} className="grid gap-3 rounded-lg border border-line bg-white p-4">
+          <div className="grid grid-cols-[1fr_auto] items-end gap-2">
+            <Field label={`Etiqueta ${index + 1}`} value={item.label || ""} onChange={(value) => updateItem(index, { label: value })} />
+            <button type="button" className="mb-0 grid size-10 place-items-center rounded-md text-red-600 hover:bg-red-50" onClick={() => onChange({ items: items.filter((_: any, itemIndex: number) => itemIndex !== index) })}><Trash2 size={15} /></button>
+          </div>
+          <RichTextarea label="Contenido" value={item.bodyHtml || item.body || ""} onChange={(html) => updateItem(index, { bodyHtml: html, body: htmlToText(html) })} rows={5} />
+        </section>
+      ))}
+      <button type="button" disabled={items.length >= 6} className="w-fit rounded-md bg-mist px-3 py-2 text-sm font-extrabold disabled:opacity-40" onClick={() => onChange({ items: [...items, { label: `Tab ${items.length + 1}`, body: "Contenido del tab", bodyHtml: "Contenido del tab" }] })}>Agregar tab</button>
+    </div>
+  );
+}
+
 function QuizForm({ block, onChange }: { block: CourseBlock; onChange: (content: Record<string, any>) => void }) {
   const c = block.content;
   const patch = (next: Record<string, any>) => onChange({ ...c, ...next });
@@ -1122,6 +1156,7 @@ function BlockPreview({ block, onQuizStatusChange }: { block: CourseBlock; onQui
   if (block.type === "image_text") return <div className="grid grid-cols-[auto_1fr] items-center gap-4 rounded-md border border-line p-3"><img className="max-w-full" style={{ width: `${Number(c.imageSize) || 180}px` }} src={resolveAsset(c.imageUrl)} alt={c.imageAlt || ""} /><div><strong className="text-sm">{c.title}</strong><div className="rich-output mt-1.5 text-sm" dangerouslySetInnerHTML={{ __html: rich(c, "text") }} /></div></div>;
   if (block.type === "image_gallery") return <ImageGalleryPreview content={c} />;
   if (block.type === "flip_cards") return <FlipCardsPreview content={c} />;
+  if (block.type === "tabs") return <TabsPreview content={c} />;
   if (block.type === "accordion") return <AccordionPreview content={c} />;
   if (block.type === "list") return <ListPreview content={c} />;
   if (block.type === "embed") return <MediaBlock content={c} />;
@@ -1234,6 +1269,37 @@ function FlipCardsPreview({ content }: { content: Record<string, any> }) {
             </button>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+function TabsPreview({ content }: { content: Record<string, any> }) {
+  const items = (content.items || []).slice(0, 6);
+  const [active, setActive] = useState(0);
+  const activeItem = items[Math.min(active, Math.max(items.length - 1, 0))];
+  const accent = safeCardColor(content.accentColor, "#4b0f78");
+  const tabBackground = safeCardColor(content.tabBackground, "#f7f7fa");
+  const panelBackground = safeCardColor(content.panelBackground, "#ffffff");
+
+  useEffect(() => {
+    if (active > Math.max(items.length - 1, 0)) setActive(0);
+  }, [active, items.length]);
+
+  if (!items.length) return null;
+
+  return (
+    <div className="grid gap-3">
+      {content.title ? <strong className="text-sm">{content.title}</strong> : null}
+      <div className="overflow-hidden rounded-md border border-line bg-white shadow-sm">
+        <div className="flex overflow-x-auto" style={{ background: tabBackground }}>
+          {items.map((item: any, index: number) => (
+            <button key={index} type="button" onClick={() => setActive(index)} className="min-h-12 min-w-[180px] flex-1 border-r border-line bg-transparent px-4 py-3 text-center text-xs font-black uppercase tracking-[0.12em] text-ink last:border-r-0" style={{ color: index === active ? accent : "#181833", background: index === active ? panelBackground : tabBackground }}>
+              {item.label || `Tab ${index + 1}`}
+            </button>
+          ))}
+        </div>
+        <div className="rich-output p-6 text-sm leading-7 text-plum" style={{ background: panelBackground }} dangerouslySetInnerHTML={{ __html: activeItem?.bodyHtml || activeItem?.body || "" }} />
       </div>
     </div>
   );

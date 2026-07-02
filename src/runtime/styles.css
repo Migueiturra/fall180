@@ -31,6 +31,11 @@ button:disabled {
   opacity: 0.45;
 }
 
+.mobile-menu-button,
+.mobile-menu-backdrop {
+  display: none;
+}
+
 .app-shell {
   display: grid;
   grid-template-columns: 286px minmax(0, 1fr);
@@ -507,6 +512,54 @@ h1 {
   right: 12px;
 }
 
+.tabs-block {
+  display: grid;
+  gap: 12px;
+}
+
+.tabs-shell {
+  background: #fff;
+  border: 1px solid rgba(60, 60, 89, 0.12);
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(24, 24, 51, 0.08);
+  overflow: hidden;
+}
+
+.tabs-list {
+  display: flex;
+  overflow-x: auto;
+}
+
+.tabs-button {
+  background: var(--tab-bg);
+  border-radius: 0;
+  border-right: 1px solid rgba(60, 60, 89, 0.12);
+  color: #181833;
+  flex: 1 0 180px;
+  font-size: 13px;
+  font-weight: 850;
+  letter-spacing: 0.11em;
+  min-height: 64px;
+  padding: 12px 18px;
+  text-transform: uppercase;
+}
+
+.tabs-button.active {
+  background: var(--panel-bg);
+  color: var(--tab-accent);
+}
+
+.tabs-panel {
+  display: none;
+  font-size: 17px;
+  line-height: 1.75;
+  padding: 28px 34px;
+}
+
+.tabs-panel.active {
+  display: block;
+}
+
 .accordion-item {
   background: #fff;
   border: 1px solid rgba(60, 60, 89, 0.12);
@@ -791,13 +844,75 @@ h1 {
 }
 
 @media (max-width: 760px) {
+  body.mobile-menu-open {
+    overflow: hidden;
+  }
+
+  .mobile-menu-button {
+    align-items: center;
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(60, 60, 89, 0.12);
+    border-radius: 8px;
+    color: #181833;
+    display: flex;
+    font-size: 22px;
+    height: 38px;
+    justify-content: center;
+    left: 12px;
+    min-height: 38px;
+    padding: 0;
+    position: fixed;
+    top: 12px;
+    width: 38px;
+    z-index: 60;
+  }
+
+  .mobile-menu-backdrop {
+    background: rgba(24, 24, 51, 0.28);
+    display: block;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    position: fixed;
+    transition: opacity 180ms ease;
+    z-index: 40;
+  }
+
+  body.mobile-menu-open .mobile-menu-backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
   .app-shell {
     grid-template-columns: 1fr;
   }
 
   .sidebar {
-    min-height: auto;
-    position: static;
+    bottom: 0;
+    box-shadow: 16px 0 42px rgba(24, 24, 51, 0.18);
+    left: 0;
+    max-width: min(340px, 88vw);
+    min-height: 100vh;
+    overflow-y: auto;
+    position: fixed;
+    top: 0;
+    transform: translateX(-105%);
+    transition: transform 240ms ease;
+    width: min(340px, 88vw);
+    z-index: 50;
+  }
+
+  body.mobile-menu-open .sidebar {
+    transform: translateX(0);
+  }
+
+  .sidebar > div:first-child {
+    min-height: 180px;
+    padding-top: 62px;
+  }
+
+  .course-main {
+    min-width: 0;
   }
 
   .image-text {
