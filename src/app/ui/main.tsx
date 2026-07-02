@@ -859,34 +859,21 @@ function SidebarToolGroup({ group, onAdd }: { group: { title: string; tools: Blo
 }
 
 function BlockPicker({ onAdd }: { onAdd: (type: BlockType) => void }) {
-  const [activeGroup, setActiveGroup] = useState(blockToolGroups[0].title);
-  const group = blockToolGroups.find((item) => item.title === activeGroup) || blockToolGroups[0];
-
   return (
-    <div className="grid w-[min(420px,calc(100vw-40px))] grid-cols-[118px_1fr] overflow-hidden rounded-lg border border-line bg-white shadow-soft">
-      <div className="border-r border-line bg-[#fbfbff] p-1.5">
-        {blockToolGroups.map((item) => (
-          <button
-            key={item.title}
-            type="button"
-            onClick={() => setActiveGroup(item.title)}
-            className={`mb-1 flex h-8 w-full items-center justify-between rounded-md px-2 text-left text-[11px] font-black uppercase tracking-[0.08em] ${item.title === activeGroup ? "bg-white text-violet shadow-sm" : "text-steel hover:bg-white/70"}`}
-          >
-            {item.title}
-            <ChevronRight size={12} />
-          </button>
+    <div className="max-w-[min(640px,calc(100vw-40px))] overflow-x-auto rounded-full border border-violet/20 bg-white/95 px-2 py-1.5 shadow-soft backdrop-blur-xl">
+      <div className="flex w-max items-center gap-0.5">
+        {blockTools.map((tool) => (
+          <Tooltip.Root key={tool.type}>
+            <Tooltip.Trigger asChild>
+              <button type="button" aria-label={tool.label} onClick={() => onAdd(tool.type)} className="grid size-8 shrink-0 place-items-center rounded-md text-ink transition hover:bg-mist hover:text-violet">
+                {tool.icon}
+              </button>
+            </Tooltip.Trigger>
+            <Tooltip.Portal>
+              <Tooltip.Content className="rounded bg-ink px-2 py-1 text-xs font-bold text-white" sideOffset={8}>{tool.label}</Tooltip.Content>
+            </Tooltip.Portal>
+          </Tooltip.Root>
         ))}
-      </div>
-      <div className="grid max-h-[260px] auto-rows-min grid-cols-2 gap-1 overflow-y-auto p-2">
-        {group.tools.map((type) => {
-          const tool = blockToolByType(type);
-          return (
-            <button key={type} type="button" onClick={() => onAdd(type)} className="flex h-9 min-w-0 items-center gap-2 rounded-md border border-line bg-white px-2 text-left text-xs font-extrabold text-ink transition hover:border-violet hover:bg-mist hover:text-violet">
-              <span className="grid size-5 shrink-0 place-items-center rounded bg-mist text-plum">{tool.icon}</span>
-              <span className="truncate">{tool.label}</span>
-            </button>
-          );
-        })}
       </div>
     </div>
   );
@@ -921,24 +908,9 @@ function InlineInsertBlockBar({ onAdd, alwaysVisible = false, label = "Agregar b
 }
 
 function BottomBlockBar({ onAdd }: { onAdd: (type: BlockType) => void }) {
-  const [open, setOpen] = useState(false);
-
-  function add(type: BlockType) {
-    onAdd(type);
-    setOpen(false);
-  }
-
   return (
-    <div className="sticky bottom-3 z-20 mx-auto mt-5 flex w-fit justify-center">
-      <button type="button" onClick={() => setOpen((current) => !current)} className="inline-flex h-10 items-center gap-2 rounded-full border border-violet/20 bg-white px-4 text-xs font-black uppercase tracking-[0.1em] text-violet shadow-soft backdrop-blur-xl hover:bg-mist">
-        <Plus size={15} />
-        Agregar bloque
-      </button>
-      {open ? (
-        <div className="absolute bottom-12 left-1/2 -translate-x-1/2">
-          <BlockPicker onAdd={add} />
-        </div>
-      ) : null}
+    <div className="sticky bottom-3 z-20 mx-auto mt-5 flex justify-center">
+      <BlockPicker onAdd={onAdd} />
     </div>
   );
 }
