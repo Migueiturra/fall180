@@ -264,6 +264,18 @@ h1 {
   max-width: none;
 }
 
+.block-align-left {
+  text-align: left;
+}
+
+.block-align-center {
+  text-align: center;
+}
+
+.block-align-right {
+  text-align: right;
+}
+
 .block h2 {
   color: #181833;
   font-size: 42px;

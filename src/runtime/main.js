@@ -313,7 +313,8 @@
   function blockLayoutClass(content) {
     var padding = layoutValue(content.blockPadding, ["none", "small", "medium", "large"], "medium");
     var width = layoutValue(content.contentWidth, ["s", "m", "l"], "m");
-    return "block-layout block-padding-" + padding + " block-width-" + width;
+    var align = layoutValue(content.blockAlign, ["left", "center", "right"], "left");
+    return "block-layout block-padding-" + padding + " block-width-" + width + " block-align-" + align;
   }
 
   function wrapBlock(block, html) {

@@ -326,6 +326,13 @@ function blockWidthClass(content: Record<string, any>) {
   return "md:max-w-4xl";
 }
 
+function blockAlignClass(content: Record<string, any>) {
+  const value = content.blockAlign || "left";
+  if (value === "center") return "text-center";
+  if (value === "right") return "text-right";
+  return "text-left";
+}
+
 function blockScreenMap(lesson: Lesson) {
   let screen = 0;
   return lesson.blocks.map((block) => {
@@ -854,7 +861,7 @@ function BlockShell({ block, editing, onEdit, onSave, onDuplicate, onMove, onDel
       <div className="p-0">
         {editing ? (
           <>
-            <BlockLayoutControls content={block.content} onChange={patch} />
+            <BlockLayoutControls block={block} onChange={patch} />
             <BlockContentFrame block={block}>
               <BlockForm block={block} onChange={onChange} />
             </BlockContentFrame>
@@ -876,11 +883,14 @@ function BlockShell({ block, editing, onEdit, onSave, onDuplicate, onMove, onDel
   );
 }
 
-function BlockLayoutControls({ content, onChange }: { content: Record<string, any>; onChange: (patch: Record<string, any>) => void }) {
+function BlockLayoutControls({ block, onChange }: { block: CourseBlock; onChange: (patch: Record<string, any>) => void }) {
+  const content = block.content;
   return (
     <div className="flex flex-wrap items-center gap-3 border-b border-line bg-[#fbfbff] px-3 py-2">
       <SegmentedControl label="Padding" value={content.blockPadding || "medium"} options={[["none", "Ninguno"], ["small", "Peq."], ["medium", "Med."], ["large", "Grande"]]} onChange={(value) => onChange({ blockPadding: value })} />
       <SegmentedControl label="Ancho" value={content.contentWidth || "m"} options={[["s", "S"], ["m", "M"], ["l", "L"]]} onChange={(value) => onChange({ contentWidth: value })} />
+      <SegmentedControl label="Alinear" value={content.blockAlign || "left"} options={[["left", "Izq."], ["center", "Centro"], ["right", "Der."]]} onChange={(value) => onChange({ blockAlign: value })} />
+      {isQuestionType(block.type) ? <SegmentedControl label="Obligatorio" value={content.required === false ? "no" : "yes"} options={[["yes", "Si"], ["no", "No"]]} onChange={(value) => onChange({ required: value === "yes" })} /> : null}
       <HexColorField label="Fondo" value={content.blockBackground || ""} onChange={(value) => onChange({ blockBackground: value })} allowEmpty />
     </div>
   );
@@ -912,7 +922,7 @@ function BlockContentFrame({ block, children }: { block: CourseBlock; children: 
   const background = /^#[0-9a-fA-F]{6}$/.test(block.content.blockBackground || "") ? block.content.blockBackground : undefined;
   return (
     <div className={`${blockPaddingClass(block.content)} ${background ? "rounded-md" : ""}`} style={background ? { background } : undefined}>
-      <div className={`w-full ${blockWidthClass(block.content)} mx-auto`}>
+      <div className={`w-full ${blockWidthClass(block.content)} ${blockAlignClass(block.content)} mx-auto`}>
         {children}
       </div>
     </div>
