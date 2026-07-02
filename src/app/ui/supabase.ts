@@ -48,16 +48,37 @@ export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
 
+function supabaseErrorMessage(error: unknown, fallback: string) {
+  if (!error) return fallback;
+  if (error instanceof Error) return error.message || fallback;
+  if (typeof error === "string") return error || fallback;
+  if (typeof error === "object") {
+    const item = error as { message?: string; details?: string; hint?: string; code?: string; status?: number };
+    return [
+      item.message,
+      item.details ? `Detalle: ${item.details}` : "",
+      item.hint ? `Sugerencia: ${item.hint}` : "",
+      item.code ? `Codigo: ${item.code}` : "",
+      item.status ? `Estado: ${item.status}` : ""
+    ].filter(Boolean).join(" ");
+  }
+  return fallback;
+}
+
+function throwSupabaseError(error: unknown, fallback: string): never {
+  throw new Error(supabaseErrorMessage(error, fallback));
+}
+
 export async function getCurrentSession(): Promise<Session | null> {
   if (!supabase) return null;
   let { data, error } = await supabase.auth.getSession();
-  if (error) throw error;
+  if (error) throwSupabaseError(error, "No se pudo leer la sesion de Supabase.");
   if (!data.session && window.location.hash.includes("access_token")) {
     await new Promise((resolve) => window.setTimeout(resolve, 450));
     const retry = await supabase.auth.getSession();
     data = retry.data;
     error = retry.error;
-    if (error) throw error;
+    if (error) throwSupabaseError(error, "No se pudo completar la sesion de Supabase.");
   }
   return data.session;
 }
@@ -69,36 +90,52 @@ export function onAuthSessionChange(callback: (session: Session | null) => void)
 }
 
 export async function loadCurrentProfile(): Promise<AuthProfile | null> {
+  try {
+    return await ensureCurrentProfile();
+  } catch (error) {
+    console.warn("No se pudo sincronizar el perfil de Supabase.", error);
+    return authFallbackProfile();
+  }
+}
+
+async function authFallbackProfile(): Promise<AuthProfile | null> {
   if (!supabase) return null;
   const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError) throw userError;
+  if (userError) throwSupabaseError(userError, "No se pudo leer el usuario de Supabase.");
   const user = userData.user;
   if (!user) return null;
 
   const metadata = user.user_metadata || {};
-  const fallbackProfile = {
+  return {
     id: user.id,
     email: user.email || "",
     full_name: String(metadata.full_name || metadata.name || ""),
     avatar_url: String(metadata.avatar_url || metadata.picture || ""),
     role: "user" as const
   };
+}
+
+async function ensureCurrentProfile(): Promise<AuthProfile | null> {
+  if (!supabase) return null;
+  const fallbackProfile = await authFallbackProfile();
+  if (!fallbackProfile) return null;
 
   const { data, error } = await supabase
     .from("profiles")
     .select("id,email,full_name,avatar_url,role,created_at")
-    .eq("id", user.id)
+    .eq("id", fallbackProfile.id)
     .maybeSingle();
 
-  if (!error && data) return data as AuthProfile;
+  if (error) throwSupabaseError(error, "No se pudo leer el perfil en Supabase.");
+  if (data) return data as AuthProfile;
 
   const { data: inserted, error: insertError } = await supabase
     .from("profiles")
-    .upsert(fallbackProfile, { onConflict: "id" })
+    .insert(fallbackProfile)
     .select("id,email,full_name,avatar_url,role,created_at")
     .single();
 
-  if (insertError) return fallbackProfile;
+  if (insertError) throwSupabaseError(insertError, "No se pudo crear el perfil en Supabase.");
   return inserted as AuthProfile;
 }
 
@@ -114,13 +151,13 @@ export async function signInWithGoogle() {
       redirectTo: cleanRedirectUrl()
     }
   });
-  if (error) throw error;
+  if (error) throwSupabaseError(error, "No se pudo iniciar sesion con Google.");
 }
 
 export async function signInWithEmail(email: string, password: string) {
   if (!supabase) throw new Error("Supabase no esta configurado.");
   const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) throw error;
+  if (error) throwSupabaseError(error, "No se pudo iniciar sesion.");
 }
 
 export async function signUpWithEmail(email: string, password: string, fullName: string) {
@@ -132,19 +169,19 @@ export async function signUpWithEmail(email: string, password: string, fullName:
       data: { full_name: fullName }
     }
   });
-  if (error) throw error;
+  if (error) throwSupabaseError(error, "No se pudo crear la cuenta.");
 }
 
 export async function signOut() {
   if (!supabase) return;
   const { error } = await supabase.auth.signOut();
-  if (error) throw error;
+  if (error) throwSupabaseError(error, "No se pudo cerrar sesion.");
 }
 
 async function currentUserId() {
   if (!supabase) return "";
   const { data, error } = await supabase.auth.getUser();
-  if (error) throw error;
+  if (error) throwSupabaseError(error, "No se pudo leer el usuario de Supabase.");
   return data.user?.id || "";
 }
 
@@ -186,7 +223,7 @@ export async function loadSupabaseCourseList(): Promise<CourseSummary[]> {
     .select("id,owner_id,title,description,lesson_count,payload,updated_at")
     .order("updated_at", { ascending: false });
 
-  if (error) throw error;
+  if (error) throwSupabaseError(error, "No se pudo cargar la lista de cursos desde Supabase.");
   return (data || []).map((row) => rowToSummary(row as CourseRow));
 }
 
@@ -199,7 +236,7 @@ export async function loadSupabaseCourse(id: string): Promise<Course | null> {
     .eq("id", id)
     .maybeSingle();
 
-  if (error) throw error;
+  if (error) throwSupabaseError(error, "No se pudo cargar el curso desde Supabase.");
   if (!data?.payload) return null;
   const course = data.payload as Course;
   return {
@@ -213,7 +250,7 @@ export async function loadSupabaseCourse(id: string): Promise<Course | null> {
 
 export async function createSupabaseCourse(course: Course): Promise<CourseSummary> {
   if (!supabase) throw new Error("Supabase no esta configurado.");
-  await loadCurrentProfile();
+  await ensureCurrentProfile();
   const ownerId = await currentUserId();
   if (!ownerId) throw new Error("Debes iniciar sesion para crear cursos.");
 
@@ -223,13 +260,13 @@ export async function createSupabaseCourse(course: Course): Promise<CourseSummar
     .select("id,owner_id,title,description,lesson_count,payload,updated_at")
     .single();
 
-  if (error) throw error;
+  if (error) throwSupabaseError(error, "No se pudo crear el curso en Supabase.");
   return rowToSummary(data as CourseRow);
 }
 
 export async function saveSupabaseCourse(course: Course): Promise<void> {
   if (!supabase) throw new Error("Supabase no esta configurado.");
-  await loadCurrentProfile();
+  await ensureCurrentProfile();
   const userId = await currentUserId();
   const ownerId = typeof course.metadata?.ownerId === "string" ? course.metadata.ownerId : userId;
   if (!userId || !ownerId) throw new Error("Debes iniciar sesion para guardar cursos.");
@@ -240,7 +277,7 @@ export async function saveSupabaseCourse(course: Course): Promise<void> {
     .eq("id", course.id)
     .maybeSingle();
 
-  if (findError) throw findError;
+  if (findError) throwSupabaseError(findError, "No se pudo verificar el curso en Supabase.");
 
   if (existing) {
     const currentOwnerId = existing.owner_id || ownerId;
@@ -251,7 +288,7 @@ export async function saveSupabaseCourse(course: Course): Promise<void> {
       .select("id")
       .single();
 
-    if (error) throw error;
+    if (error) throwSupabaseError(error, "No se pudo guardar el curso en Supabase.");
     if (!data) throw new Error("No se pudo guardar el curso. Revisa los permisos del propietario.");
     return;
   }
@@ -260,7 +297,7 @@ export async function saveSupabaseCourse(course: Course): Promise<void> {
     .from("courses")
     .insert(coursePayload(course, ownerId));
 
-  if (error) throw error;
+  if (error) throwSupabaseError(error, "No se pudo crear el curso en Supabase.");
 }
 
 export async function deleteSupabaseCourse(id: string): Promise<void> {
@@ -272,7 +309,7 @@ export async function deleteSupabaseCourse(id: string): Promise<void> {
     .eq("id", id)
     .select("id");
 
-  if (error) throw error;
+  if (error) throwSupabaseError(error, "No se pudo eliminar el curso en Supabase.");
   if (!data?.length) throw new Error("No se pudo eliminar el curso. Puede que no tengas permisos sobre este curso.");
 }
 
@@ -289,7 +326,7 @@ export async function uploadSupabaseAsset(file: File): Promise<string> {
     upsert: false
   });
 
-  if (error) throw error;
+  if (error) throwSupabaseError(error, "No se pudo subir el archivo a Supabase Storage.");
   const { data } = supabase.storage.from("course-assets").getPublicUrl(path);
   return data.publicUrl;
 }

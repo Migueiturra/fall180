@@ -112,11 +112,19 @@ drop policy if exists "Users can read own courses" on public.courses;
 drop policy if exists "Users can create own courses" on public.courses;
 drop policy if exists "Users can update own courses" on public.courses;
 drop policy if exists "Users can delete own courses" on public.courses;
+drop policy if exists "Authenticated users can read orphan courses" on public.courses;
+drop policy if exists "Authenticated users can claim orphan courses" on public.courses;
+drop policy if exists "Authenticated users can delete orphan courses" on public.courses;
 
 create policy "Users can read own courses"
   on public.courses
   for select
   using (owner_id = auth.uid() or public.is_super_admin());
+
+create policy "Authenticated users can read orphan courses"
+  on public.courses
+  for select
+  using (owner_id is null and auth.uid() is not null);
 
 create policy "Users can create own courses"
   on public.courses
@@ -129,10 +137,21 @@ create policy "Users can update own courses"
   using (owner_id = auth.uid() or public.is_super_admin())
   with check (owner_id = auth.uid() or public.is_super_admin());
 
+create policy "Authenticated users can claim orphan courses"
+  on public.courses
+  for update
+  using (owner_id is null and auth.uid() is not null)
+  with check (owner_id = auth.uid());
+
 create policy "Users can delete own courses"
   on public.courses
   for delete
   using (owner_id = auth.uid() or public.is_super_admin());
+
+create policy "Authenticated users can delete orphan courses"
+  on public.courses
+  for delete
+  using (owner_id is null and auth.uid() is not null);
 
 insert into storage.buckets (id, name, public)
 values ('course-assets', 'course-assets', true)
