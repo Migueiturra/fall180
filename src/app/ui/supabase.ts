@@ -50,8 +50,15 @@ export const supabase = isSupabaseConfigured
 
 export async function getCurrentSession(): Promise<Session | null> {
   if (!supabase) return null;
-  const { data, error } = await supabase.auth.getSession();
+  let { data, error } = await supabase.auth.getSession();
   if (error) throw error;
+  if (!data.session && window.location.hash.includes("access_token")) {
+    await new Promise((resolve) => window.setTimeout(resolve, 450));
+    const retry = await supabase.auth.getSession();
+    data = retry.data;
+    error = retry.error;
+    if (error) throw error;
+  }
   return data.session;
 }
 
@@ -91,8 +98,12 @@ export async function loadCurrentProfile(): Promise<AuthProfile | null> {
     .select("id,email,full_name,avatar_url,role,created_at")
     .single();
 
-  if (insertError) throw insertError;
+  if (insertError) return fallbackProfile;
   return inserted as AuthProfile;
+}
+
+function cleanRedirectUrl() {
+  return `${window.location.origin}${window.location.pathname}${window.location.search}`;
 }
 
 export async function signInWithGoogle() {
@@ -100,7 +111,7 @@ export async function signInWithGoogle() {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: window.location.href
+      redirectTo: cleanRedirectUrl()
     }
   });
   if (error) throw error;

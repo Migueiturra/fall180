@@ -560,7 +560,16 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       .then(async (currentSession) => {
         if (!active) return;
         setSession(currentSession);
-        if (currentSession) setProfile(await loadCurrentProfile());
+        if (currentSession) {
+          try {
+            setProfile(await loadCurrentProfile());
+          } catch {
+            setProfile(null);
+          }
+          if (window.location.hash.includes("access_token")) {
+            window.history.replaceState({}, document.title, `${window.location.pathname}${window.location.search}`);
+          }
+        }
       })
       .catch(() => {
         if (active) {
@@ -576,6 +585,9 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         setProfile(nextSession ? await loadCurrentProfile() : null);
       } catch {
         setProfile(null);
+      }
+      if (nextSession && window.location.hash.includes("access_token")) {
+        window.history.replaceState({}, document.title, `${window.location.pathname}${window.location.search}`);
       }
       setLoading(false);
     });
