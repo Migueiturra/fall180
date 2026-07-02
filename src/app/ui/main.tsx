@@ -1082,7 +1082,7 @@ function BlockContentFrame({ block, children }: { block: CourseBlock; children: 
   );
 }
 
-function RichTextarea({ label, value, onChange, rows = 4 }: { label: string; value: string; onChange: (html: string) => void; rows?: number }) {
+function RichTextarea({ label, value, onChange, rows = 4, fixedHeight }: { label: string; value: string; onChange: (html: string) => void; rows?: number; fixedHeight?: number }) {
   const editorRef = useRef<HTMLDivElement | null>(null);
   const savedRangeRef = useRef<Range | null>(null);
   const [size, setSize] = useState("16");
@@ -1166,7 +1166,17 @@ function RichTextarea({ label, value, onChange, rows = 4 }: { label: string; val
         <input type="color" value={/^#[0-9a-fA-F]{6}$/.test(hex) ? hex : "#181833"} onChange={(event) => applyColor(event.target.value)} className="size-7 rounded-full border border-line bg-white p-0" />
         <input value={hex} onChange={(event) => applyColor(event.target.value)} className="h-7 w-24 rounded-md border border-line px-2 text-xs font-bold outline-none focus:border-violet" placeholder="#181833" />
       </div>
-      <div ref={editorRef} contentEditable suppressContentEditableWarning onInput={sync} onMouseUp={saveSelection} onKeyUp={saveSelection} onBlur={saveSelection} className="min-h-28 rounded-md border border-line bg-white p-3 text-sm font-semibold leading-7 text-ink outline-none focus:border-violet" style={{ minHeight: `${Math.max(rows, 3) * 34}px` }} />
+      <div
+        ref={editorRef}
+        contentEditable
+        suppressContentEditableWarning
+        onInput={sync}
+        onMouseUp={saveSelection}
+        onKeyUp={saveSelection}
+        onBlur={saveSelection}
+        className="min-h-28 overflow-y-auto rounded-md border border-line bg-white p-3 text-sm font-semibold leading-7 text-ink outline-none focus:border-violet"
+        style={fixedHeight ? { height: `${fixedHeight}px` } : { minHeight: `${Math.max(rows, 3) * 34}px` }}
+      />
     </div>
   );
 }
@@ -1247,11 +1257,11 @@ function FlipCardsForm({ content, onChange }: { content: Record<string, any>; on
           <div className="grid gap-4 md:grid-cols-2">
             <div className="grid gap-3">
               <HexColorField label="Fondo frente" value={card.frontColor || "#ffffff"} onChange={(value) => updateCard(index, { frontColor: value })} />
-              <RichTextarea label="Texto frente" value={card.frontHtml || card.front || ""} onChange={(html) => updateCard(index, { frontHtml: html, front: htmlToText(html) })} rows={4} />
+              <RichTextarea label="Texto frente" value={card.frontHtml || card.front || ""} onChange={(html) => updateCard(index, { frontHtml: html, front: htmlToText(html) })} rows={4} fixedHeight={180} />
             </div>
             <div className="grid gap-3">
               <HexColorField label="Fondo reverso" value={card.backColor || "#181833"} onChange={(value) => updateCard(index, { backColor: value })} />
-              <RichTextarea label="Texto reverso" value={card.backHtml || card.back || ""} onChange={(html) => updateCard(index, { backHtml: html, back: htmlToText(html) })} rows={4} />
+              <RichTextarea label="Texto reverso" value={card.backHtml || card.back || ""} onChange={(html) => updateCard(index, { backHtml: html, back: htmlToText(html) })} rows={4} fixedHeight={180} />
             </div>
           </div>
         </section>
