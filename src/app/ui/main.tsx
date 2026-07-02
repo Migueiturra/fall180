@@ -922,6 +922,23 @@ function BlockPicker({ onAdd }: { onAdd: (type: BlockType) => void }) {
 
 function InlineInsertBlockBar({ onAdd, alwaysVisible = false, label = "Agregar bloque aqui" }: { onAdd: (type: BlockType) => void; alwaysVisible?: boolean; label?: string }) {
   const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handlePointerDown(event: PointerEvent) {
+      if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
 
   function add(type: BlockType) {
     onAdd(type);
@@ -929,7 +946,7 @@ function InlineInsertBlockBar({ onAdd, alwaysVisible = false, label = "Agregar b
   }
 
   return (
-    <div className="group relative -my-1 grid min-h-7 place-items-center">
+    <div ref={containerRef} className="group relative -my-1 grid min-h-7 place-items-center">
       <div className="absolute left-0 right-0 top-1/2 h-px -translate-y-1/2 bg-line opacity-0 transition group-hover:opacity-100" />
       <button
         type="button"
@@ -1028,11 +1045,36 @@ function linesToItems(value: string) {
   return value.split("\n").map((line) => line.trim()).filter(Boolean);
 }
 
+function listEditorItems(content: Record<string, any>) {
+  const htmlItems = Array.isArray(content.itemsHtml) ? content.itemsHtml : [];
+  const textItems = Array.isArray(content.items) ? content.items : [];
+  const source = htmlItems.length ? htmlItems : textItems;
+  return source.length ? source.map((item: any, index: number) => ({
+    html: typeof item === "string" ? item : item?.html || "",
+    text: textItems[index] || htmlToText(typeof item === "string" ? item : item?.html || "")
+  })) : [{ html: "Nuevo punto", text: "Nuevo punto" }];
+}
+
+function richListItems(content: Record<string, any>) {
+  const htmlItems = Array.isArray(content.itemsHtml) ? content.itemsHtml : [];
+  const textItems = Array.isArray(content.items) ? content.items : [];
+  const source = htmlItems.length ? htmlItems : textItems;
+  return source.map((item: any, index: number) => ({
+    html: typeof item === "string" ? item : item?.html || "",
+    text: textItems[index] || htmlToText(typeof item === "string" ? item : item?.html || "")
+  }));
+}
+
 function BlockShell({ block, editing, onEdit, onSave, onDuplicate, onMove, onDelete, onChange }: { block: CourseBlock; editing: boolean; onEdit: () => void; onSave: () => void; onDuplicate: () => void; onMove: (direction: number) => void; onDelete: () => void; onChange: (content: Record<string, any>) => void }) {
   const patch = (next: Record<string, any>) => onChange({ ...block.content, ...next });
+  const tool = blockToolByType(block.type);
   return (
-    <article className={`grid grid-cols-[64px_minmax(0,1fr)_auto] overflow-hidden rounded-md border ${editing ? "border-violet bg-white shadow-soft" : "border-line bg-white"}`}>
-      <button onClick={onEdit} className={`border-r border-line text-[11px] font-black ${editing ? "bg-mist text-ink" : "text-violet hover:bg-mist"}`}>Editar</button>
+    <article className={`grid grid-cols-[78px_minmax(0,1fr)_auto] overflow-hidden rounded-md border ${editing ? "border-violet bg-white shadow-soft" : "border-line bg-white"}`}>
+      <button onClick={onEdit} className={`grid place-items-center gap-1 border-r border-line px-1 text-center ${editing ? "bg-mist text-ink" : "text-violet hover:bg-mist"}`}>
+        <span className="grid size-6 place-items-center rounded-md bg-white/80 text-plum">{tool.icon}</span>
+        <span className="max-w-[64px] truncate text-[10px] font-black uppercase tracking-[0.06em]">{tool.label}</span>
+        <span className="text-[10px] font-semibold text-steel">Editar</span>
+      </button>
       <div className="p-0">
         {editing ? (
           <>
@@ -1210,7 +1252,7 @@ function RichTextarea({ label, value, onChange, rows = 4, fixedHeight }: { label
         onMouseUp={saveSelection}
         onKeyUp={saveSelection}
         onBlur={saveSelection}
-        className="min-h-28 overflow-y-auto rounded-md border border-line bg-white p-3 text-sm font-semibold leading-7 text-ink outline-none focus:border-violet"
+        className="min-h-24 overflow-y-auto rounded-md border border-line bg-white p-3 text-sm font-normal leading-7 text-ink outline-none focus:border-violet"
         style={fixedHeight ? { height: `${fixedHeight}px` } : { minHeight: `${Math.max(rows, 3) * 34}px` }}
       />
     </div>
@@ -1221,14 +1263,14 @@ function BlockForm({ block, onChange }: { block: CourseBlock; onChange: (content
   const c = block.content;
   const patch = (next: Record<string, any>) => onChange({ ...c, ...next });
 
-  if (block.type === "heading" || block.type === "paragraph") return <RichTextarea label="Texto" value={rich(c, "text")} onChange={(html) => patch({ textHtml: html, text: htmlToText(html) })} rows={block.type === "heading" ? 2 : 7} />;
+  if (block.type === "heading" || block.type === "paragraph") return <RichTextarea label="Texto" value={rich(c, "text")} onChange={(html) => patch({ textHtml: html, text: htmlToText(html) })} rows={block.type === "heading" ? 2 : 5} />;
   if (block.type === "statement") return <RichTextarea label="Statement" value={rich(c, "text")} onChange={(html) => patch({ textHtml: html, text: htmlToText(html) })} rows={5} />;
   if (block.type === "image_text") return <div className="grid gap-4"><ImageUploadField label="Imagen" value={c.imageUrl || ""} onChange={(value) => patch({ imageUrl: value })} /><Field label="Tamano imagen px" type="number" value={String(c.imageSize || 180)} onChange={(value) => patch({ imageSize: Number(value) || 180 })} /><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} /><RichTextarea label="Texto" value={rich(c, "text")} onChange={(html) => patch({ textHtml: html, text: htmlToText(html) })} /></div>;
   if (block.type === "image_gallery") return <ImageGalleryForm content={c} onChange={patch} />;
   if (block.type === "flip_cards") return <FlipCardsForm content={c} onChange={patch} />;
   if (block.type === "tabs") return <TabsForm content={c} onChange={patch} />;
   if (block.type === "accordion") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} />{(c.items || []).map((item: any, index: number) => <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2"><Field label={`Item ${index + 1}`} value={item.title || ""} onChange={(value) => { const items = [...(c.items || [])]; items[index] = { ...item, title: value }; patch({ items }); }} /><Field label="Texto" value={item.text || ""} onChange={(value) => { const items = [...(c.items || [])]; items[index] = { ...item, text: value }; patch({ items }); }} /><button className="mt-6 grid size-10 place-items-center rounded-md text-red-600 hover:bg-red-50" onClick={() => patch({ items: (c.items || []).filter((_: any, i: number) => i !== index) })}><Trash2 size={15} /></button></div>)}<button className="w-fit rounded-md bg-mist px-3 py-2 text-sm font-extrabold" onClick={() => patch({ items: [...(c.items || []), { title: "Nuevo item", text: "Contenido" }] })}>Agregar item</button></div>;
-  if (block.type === "list") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} /><SelectField label="Tipo" value={c.listStyle || "bullet"} onChange={(value) => patch({ listStyle: value })} options={[["bullet", "Puntos"], ["number", "1, 2, 3"]]} /><TextField label="Items, uno por linea" value={(c.items || []).join("\n")} onChange={(value) => patch({ items: linesToItems(value) })} rows={6} /></div>;
+  if (block.type === "list") return <ListForm content={c} onChange={patch} />;
   if (block.type === "embed") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} /><Field label="URL" value={c.url || ""} onChange={(value) => patch({ url: value })} /><Field label="Bajada" value={c.caption || ""} onChange={(value) => patch({ caption: value })} /></div>;
   if (block.type === "custom_html") return <div className="grid gap-4"><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} /><TextField label="Codigo HTML" value={c.html || ""} onChange={(value) => patch({ html: value })} rows={9} /><SelectField label="Alineacion horizontal" value={c.htmlAlign || "center"} onChange={(value) => patch({ htmlAlign: value })} options={[["left", "Izquierda"], ["center", "Centro"], ["right", "Derecha"]]} /><SelectField label="Alineacion vertical" value={c.htmlVerticalAlign || "center"} onChange={(value) => patch({ htmlVerticalAlign: value })} options={[["top", "Arriba"], ["center", "Centro"], ["bottom", "Abajo"]]} /><SelectField label="Ancho" value={c.htmlWidthMode || "fixed"} onChange={(value) => patch({ htmlWidthMode: value })} options={[["fixed", "Fijo en px"], ["full", "Todo el bloque"]]} /><Field label="Ancho iframe px" type="number" value={String(customHtmlWidth(c))} onChange={(value) => patch({ htmlWidth: Number(value) || 400 })} /><SelectField label="Alto" value={c.htmlSizing || "auto"} onChange={(value) => patch({ htmlSizing: value })} options={[["auto", "Segun contenido"], ["fixed", "Fijo en px"]]} /><Field label="Alto/minimo px" type="number" value={String(Number(c.htmlHeight) || 420)} onChange={(value) => patch({ htmlHeight: Number(value) || 420 })} /><SelectField label="Marco" value={c.hasFrame === false ? "no" : "yes"} onChange={(value) => patch({ hasFrame: value === "yes" })} options={[["yes", "Con marco"], ["no", "Sin marco"]]} /><SelectField label="Tailwind / HyperUI" value={c.enableTailwind === false ? "no" : "yes"} onChange={(value) => patch({ enableTailwind: value === "yes" })} options={[["yes", "Activado"], ["no", "Desactivado"]]} /></div>;
   if (block.type === "continue_button") return <div className="grid gap-4"><Field label="Texto del boton" value={c.label || "Continuar"} onChange={(value) => patch({ label: value })} /><SelectField label="Tamano boton" value={c.buttonSize || "medium"} onChange={(value) => patch({ buttonSize: value })} options={[["small", "Pequeno"], ["medium", "Mediano"], ["full", "Grande / ancho completo"]]} /><HexColorField label="Color" value={c.buttonColor || "#181833"} onChange={(value) => patch({ buttonColor: value })} /></div>;
@@ -1238,6 +1280,41 @@ function BlockForm({ block, onChange }: { block: CourseBlock; onChange: (content
 
 function SelectField({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: string[][] }) {
   return <label className="grid gap-2 text-xs font-extrabold text-steel">{label}<select value={value} onChange={(event) => onChange(event.target.value)} className="h-10 rounded-md border border-line px-3 text-sm font-semibold text-ink">{options.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>;
+}
+
+function ListForm({ content, onChange }: { content: Record<string, any>; onChange: (patch: Record<string, any>) => void }) {
+  const items = listEditorItems(content);
+
+  function commit(next: Array<{ html: string; text: string }>) {
+    onChange({
+      itemsHtml: next.map((item) => item.html),
+      items: next.map((item) => item.text)
+    });
+  }
+
+  function updateItem(index: number, html: string) {
+    const next = items.map((item, itemIndex) => itemIndex === index ? { html, text: htmlToText(html) } : item);
+    commit(next);
+  }
+
+  return (
+    <div className="grid gap-4">
+      <Field label="Titulo" value={content.title || ""} onChange={(value) => onChange({ title: value })} />
+      <SelectField label="Tipo" value={content.listStyle || "bullet"} onChange={(value) => onChange({ listStyle: value })} options={[["bullet", "Puntos"], ["number", "1, 2, 3"]]} />
+      <div className="grid gap-3">
+        {items.map((item, index) => (
+          <div key={index} className="rounded-md border border-line bg-[#fbfbff] p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-[0.1em] text-steel">Item {index + 1}</span>
+              <button className="grid size-8 place-items-center rounded-md text-red-600 hover:bg-red-50" onClick={() => commit(items.filter((_, itemIndex) => itemIndex !== index))}><Trash2 size={14} /></button>
+            </div>
+            <RichTextarea label="Texto" value={item.html} onChange={(html) => updateItem(index, html)} rows={2} />
+          </div>
+        ))}
+      </div>
+      <button type="button" className="w-fit rounded-md bg-mist px-3 py-2 text-sm font-extrabold" onClick={() => commit([...items, { html: "Nuevo punto", text: "Nuevo punto" }])}>Agregar item</button>
+    </div>
+  );
 }
 
 function ImageGalleryForm({ content, onChange }: { content: Record<string, any>; onChange: (patch: Record<string, any>) => void }) {
@@ -1515,12 +1592,13 @@ function TabsPreview({ content }: { content: Record<string, any> }) {
 }
 
 function AccordionPreview({ content }: { content: Record<string, any> }) {
-  return <div className="grid gap-2">{content.title ? <strong className="text-sm">{content.title}</strong> : null}{(content.items || []).map((item: any, index: number) => <details key={index} className="rounded-md border border-line bg-white p-3"><summary className="cursor-pointer text-sm font-black text-ink">{item.title}</summary><p className="mt-2 text-sm leading-6 text-plum">{item.text}</p></details>)}</div>;
+  return <div className="grid gap-2">{content.title ? <strong className="text-sm" style={{ color: "var(--ps-accent, #3C3C59)" }}>{content.title}</strong> : null}{(content.items || []).map((item: any, index: number) => <details key={index} className="rounded-md border bg-white p-3" style={{ borderColor: "color-mix(in srgb, var(--ps-primary, #8182F2) 28%, #dedff2)" }}><summary className="cursor-pointer text-sm font-black" style={{ color: "var(--ps-ink, #181833)" }}>{item.title}</summary><p className="mt-2 text-sm leading-6" style={{ color: "var(--ps-accent, #3C3C59)" }}>{item.text}</p></details>)}</div>;
 }
 
 function ListPreview({ content }: { content: Record<string, any> }) {
   const Tag = content.listStyle === "number" ? "ol" : "ul";
-  return <div className="grid gap-2">{content.title ? <strong className="text-sm">{content.title}</strong> : null}<Tag className={`grid gap-2 pl-5 text-sm leading-6 text-plum ${content.listStyle === "number" ? "list-decimal" : "list-disc"}`}>{(content.items || []).map((item: string, index: number) => <li key={index}>{item}</li>)}</Tag></div>;
+  const items = richListItems(content);
+  return <div className="grid gap-2">{content.title ? <strong className="text-sm">{content.title}</strong> : null}<Tag className={`grid gap-2 pl-5 text-sm leading-6 text-plum ${content.listStyle === "number" ? "list-decimal" : "list-disc"}`}>{items.map((item, index: number) => <li key={index} className="rich-output" dangerouslySetInnerHTML={{ __html: item.html || item.text }} />)}</Tag></div>;
 }
 
 function continueButtonClass(size = "medium") {

@@ -459,7 +459,9 @@
 
     if (block.type === "list") {
       var tag = block.content.listStyle === "number" ? "ol" : "ul";
-      var itemsHtml = (block.content.items || []).map(function (item) { return '<li>' + escapeHtml(item) + '</li>'; }).join("");
+      var hasRichItems = Array.isArray(block.content.itemsHtml) && block.content.itemsHtml.length;
+      var richItems = hasRichItems ? block.content.itemsHtml : (block.content.items || []);
+      var itemsHtml = richItems.map(function (item) { return '<li class="rich-output">' + (hasRichItems ? sanitizeRichHtml(item) : escapeHtml(item)) + '</li>'; }).join("");
       return '<article class="block list-block reveal-block">' +
         (block.content.title ? '<strong class="media-title">' + escapeHtml(block.content.title) + '</strong>' : '') +
         '<' + tag + '>' + itemsHtml + '</' + tag + '>' +

@@ -615,19 +615,32 @@ h1 {
 
 .accordion-item {
   background: #fff;
-  border: 1px solid rgba(60, 60, 89, 0.12);
+  border: 1px solid color-mix(in srgb, var(--ps-primary) 28%, rgba(60, 60, 89, 0.12));
   border-radius: 8px;
   padding: 18px;
 }
 
 .accordion-item summary {
-  color: #181833;
+  color: var(--ps-ink);
   cursor: pointer;
   font-size: 16px;
   font-weight: 820;
 }
 
+.accordion-item summary::marker {
+  color: var(--ps-primary);
+}
+
+.accordion-item[open] {
+  border-color: color-mix(in srgb, var(--ps-primary) 56%, rgba(60, 60, 89, 0.12));
+}
+
+.accordion-item[open] summary {
+  color: var(--ps-primary);
+}
+
 .accordion-item p {
+  color: var(--ps-accent);
   margin-top: 12px;
 }
 
@@ -638,13 +651,17 @@ h1 {
 
 .list-block ul,
 .list-block ol {
-  color: #303041;
+  color: var(--ps-accent);
   display: grid;
   font-size: 18px;
   gap: 10px;
   line-height: 1.5;
   margin: 12px 0 0;
   padding-left: 26px;
+}
+
+.list-block li::marker {
+  color: var(--ps-primary);
 }
 
 .media-block {
