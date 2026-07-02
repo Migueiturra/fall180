@@ -406,6 +406,164 @@ async function createCourseRecord(): Promise<CourseSummary> {
   return courseSummary(course);
 }
 
+function csvDelimiter(text: string) {
+  const firstLine = text.split(/\r?\n/)[0] || "";
+  const semicolons = (firstLine.match(/;/g) || []).length;
+  const commas = (firstLine.match(/,/g) || []).length;
+  return semicolons > commas ? ";" : ",";
+}
+
+function parseCsv(text: string) {
+  const delimiter = csvDelimiter(text);
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let value = "";
+  let quoted = false;
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    const next = text[index + 1];
+
+    if (char === '"' && quoted && next === '"') {
+      value += '"';
+      index += 1;
+      continue;
+    }
+    if (char === '"') {
+      quoted = !quoted;
+      continue;
+    }
+    if (char === delimiter && !quoted) {
+      row.push(value.trim());
+      value = "";
+      continue;
+    }
+    if ((char === "\n" || char === "\r") && !quoted) {
+      if (char === "\r" && next === "\n") index += 1;
+      row.push(value.trim());
+      if (row.some(Boolean)) rows.push(row);
+      row = [];
+      value = "";
+      continue;
+    }
+    value += char;
+  }
+
+  row.push(value.trim());
+  if (row.some(Boolean)) rows.push(row);
+  return rows;
+}
+
+function normalizeCsvKey(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "");
+}
+
+function splitCsvList(value = "") {
+  return value
+    .split(/\s*(?:\||;|\n)\s*/g)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function csvBoolean(value = "") {
+  return ["si", "s", "yes", "true", "1", "obligatorio"].includes(normalizeCsvKey(value));
+}
+
+function csvBlockType(value = ""): BlockType {
+  const type = normalizeCsvKey(value);
+  if (["titulo", "heading", "h1", "encabezado"].includes(type)) return "heading";
+  if (["parrafo", "texto", "paragraph", "body"].includes(type)) return "paragraph";
+  if (["imagen_texto", "imagen_y_texto", "image_text"].includes(type)) return "image_text";
+  if (["imagen", "solo_imagen", "galeria", "carrusel"].includes(type)) return "image_gallery";
+  if (["statement", "declaracion", "frase"].includes(type)) return "statement";
+  if (["tarjetas", "flashcards", "cards"].includes(type)) return "flip_cards";
+  if (["tabs", "pestanas"].includes(type)) return "tabs";
+  if (["acordeon", "accordion"].includes(type)) return "accordion";
+  if (["lista", "bullets", "vinetas", "numerada"].includes(type)) return "list";
+  if (["embed", "video", "multimedia"].includes(type)) return "embed";
+  if (["html", "custom_html"].includes(type)) return "custom_html";
+  if (["pregunta_unica", "opcion_unica", "quiz", "single", "single_choice"].includes(type)) return "quiz_single_choice";
+  if (["multiple", "respuesta_multiple", "multiple_response"].includes(type)) return "quiz_multiple_response";
+  if (["completar", "fill_blank", "rellenar"].includes(type)) return "quiz_fill_blank";
+  if (["coincidencia", "matching", "relacionar"].includes(type)) return "quiz_matching";
+  if (["continuar", "continue"].includes(type)) return "continue_button";
+  if (["separador", "divider"].includes(type)) return "divider";
+  return "paragraph";
+}
+
+function blockFromCsvRow(row: Record<string, string>): CourseBlock {
+  const type = csvBlockType(row.tipo || row.bloque || row.block_type);
+  const title = row.titulo || row.title || "";
+  const content = row.contenido || row.texto || row.body || "";
+  const options = splitCsvList(row.opciones || row.alternativas || row.items);
+  const answer = row.respuesta_correcta || row.correcta || row.answer || "";
+  const required = row.obligatorio ? csvBoolean(row.obligatorio) : true;
+
+  if (type === "heading") return { id: uid("b"), type, content: { text: content || title || "Nuevo titulo", textHtml: content || title || "Nuevo titulo" } };
+  if (type === "paragraph") return { id: uid("b"), type, content: { text: content || "Escribe aqui el contenido.", textHtml: content || "Escribe aqui el contenido." } };
+  if (type === "statement") return { id: uid("b"), type, content: { text: content || title, textHtml: content || title, showDivider: true, width: "normal" } };
+  if (type === "list") return { id: uid("b"), type, content: { title, listStyle: normalizeCsvKey(row.tipo || "").includes("numerada") ? "number" : "bullet", items: options.length ? options : splitCsvList(content), itemsHtml: options.length ? options : splitCsvList(content) } };
+  if (type === "accordion") return { id: uid("b"), type, content: { title: title || "Acordeon", items: (options.length ? options : splitCsvList(content)).map((item) => ({ title: item.split(":")[0] || "Item", text: item.split(":").slice(1).join(":") || item })) } };
+  if (type === "embed") return { id: uid("b"), type, content: { title: title || "Video o recurso embebido", url: content, caption: row.bajada || "", size: "wide", aspectRatio: "16 / 9", hasFrame: true } };
+  if (type === "custom_html") return { id: uid("b"), type, content: { title: title || "HTML", html: content, htmlSizing: "auto", htmlHeight: 420, htmlWidthMode: "full", htmlWidth: 600, htmlAlign: "center", htmlVerticalAlign: "center", enableTailwind: true, hasFrame: true } };
+  if (type === "continue_button") return { id: uid("b"), type, content: { label: title || content || "Continuar", buttonSize: "medium", buttonColor: "" } };
+  if (type === "divider") return { id: uid("b"), type, content: {} };
+  if (type === "quiz_single_choice") {
+    const correctAnswer = Math.max(0, options.findIndex((option) => normalizeCsvKey(option) === normalizeCsvKey(answer)));
+    return { id: uid("b"), type, content: { question: title || content || "Pregunta", options: options.length ? options : ["Alternativa correcta", "Alternativa incorrecta"], correctAnswer, required, feedbackCorrect: "Correcto.", feedbackIncorrect: "Revisa la respuesta." } };
+  }
+  if (type === "quiz_multiple_response") {
+    const answers = splitCsvList(answer).map(normalizeCsvKey);
+    const correctAnswers = options.map((option, index) => answers.includes(normalizeCsvKey(option)) ? index : -1).filter((index) => index >= 0);
+    return { id: uid("b"), type, content: { question: title || content || "Pregunta", options: options.length ? options : ["Respuesta correcta", "Otra respuesta", "Distractor"], correctAnswers, required, feedbackCorrect: "Correcto.", feedbackIncorrect: "Revisa las alternativas." } };
+  }
+  if (type === "quiz_fill_blank") return { id: uid("b"), type, content: { question: title || "Completa la frase", prompt: content, answers: splitCsvList(answer), caseSensitive: false, required, feedbackCorrect: "Correcto.", feedbackIncorrect: "Revisa la respuesta." } };
+  if (type === "quiz_matching") {
+    const pairs = (options.length ? options : splitCsvList(content)).map((item) => {
+      const [prompt, ...match] = item.split("=");
+      return { prompt: prompt || "Concepto", match: match.join("=") || item };
+    });
+    return { id: uid("b"), type, content: { question: title || "Relaciona cada concepto", pairs, required, feedbackCorrect: "Correcto.", feedbackIncorrect: "Revisa las coincidencias." } };
+  }
+  return defaultBlock(type);
+}
+
+function courseFromCsv(text: string): Course {
+  const rows = parseCsv(text);
+  if (rows.length < 2) throw new Error("El CSV debe tener encabezados y al menos una fila de contenido.");
+  const headers = rows[0].map(normalizeCsvKey);
+  const records = rows.slice(1).map((values) => Object.fromEntries(headers.map((header, index) => [header, values[index] || ""])));
+  const first = records[0] || {};
+  const course: Course = {
+    id: `curso-csv-${Date.now()}`,
+    title: first.curso || first.nombre_curso || first.course || "Curso importado desde CSV",
+    description: first.descripcion_curso || first.descripcion || "Curso generado desde un archivo CSV.",
+    theme: { ...defaultTheme },
+    scorm: { passingScore: 70 },
+    metadata: { importedFrom: "csv", updatedAt: new Date().toISOString() },
+    lessons: []
+  };
+  const lessons = new Map<string, Lesson>();
+
+  records
+    .forEach((record) => {
+      const lessonTitle = record.unidad || record.leccion || record.modulo || "Unidad 1";
+      if (!lessons.has(lessonTitle)) {
+        lessons.set(lessonTitle, { id: uid("lesson"), title: lessonTitle, blocks: [] });
+      }
+      lessons.get(lessonTitle)!.blocks.push(blockFromCsvRow(record));
+    });
+
+  course.lessons = Array.from(lessons.values()).filter((lesson) => lesson.blocks.length);
+  if (!course.lessons.length) throw new Error("No se detectaron bloques validos en el CSV.");
+  return course;
+}
+
 async function saveCourseRecord(course: Course): Promise<{ ok: boolean; error?: string }> {
   if (isSupabaseConfigured) {
     try {
@@ -681,7 +839,7 @@ function App() {
   return <EditorApp />;
 }
 
-function AppHeader({ section }: { section: "dashboard" | "editor" | "preview" }) {
+function AppHeader({ section, actions }: { section: "dashboard" | "editor" | "preview"; actions?: React.ReactNode }) {
   return (
     <header className="sticky top-0 z-30 flex h-[56px] items-center border-b border-line bg-white/90 px-4 backdrop-blur-xl">
       <a className="flex w-[220px] items-center gap-2 no-underline" href={appRoute("/courses.html")}>
@@ -696,6 +854,7 @@ function AppHeader({ section }: { section: "dashboard" | "editor" | "preview" })
         <a className={section === "preview" ? "rounded-md bg-mist px-2.5 py-2 text-violet" : "rounded-md px-2.5 py-2 hover:bg-mist"} href={`${appRoute("/preview.html")}?course=${getCourseId()}`}>Vista previa</a>
       </nav>
       <div className="ml-auto flex items-center gap-2" id="header-actions">
+        {actions}
         {section !== "editor" ? <AuthStatus /> : null}
       </div>
     </header>
@@ -725,6 +884,9 @@ function DashboardApp() {
   const [courses, setCourses] = useState<CourseSummary[]>([]);
   const [query, setQuery] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<CourseSummary | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState("");
+  const csvInputRef = useRef<HTMLInputElement | null>(null);
 
   async function load() {
     setCourses(await loadCourseList());
@@ -733,6 +895,24 @@ function DashboardApp() {
   async function createCourse() {
     const course = await createCourseRecord();
     window.location.href = `${appRoute("/")}?course=${encodeURIComponent(course.id)}`;
+  }
+
+  async function importCsv(file?: File | null) {
+    if (!file) return;
+    setImporting(true);
+    setImportError("");
+    try {
+      const text = await file.text();
+      const course = courseFromCsv(text);
+      const result = await saveCourseRecord(course);
+      if (!result.ok) throw new Error(result.error || "No se pudo guardar el curso importado.");
+      window.location.href = `${appRoute("/")}?course=${encodeURIComponent(course.id)}`;
+    } catch (error) {
+      setImportError(error instanceof Error ? error.message : "No se pudo importar el CSV.");
+      setImporting(false);
+    } finally {
+      if (csvInputRef.current) csvInputRef.current.value = "";
+    }
   }
 
   async function deleteCourse() {
@@ -770,11 +950,19 @@ function DashboardApp() {
 
   return (
     <Tooltip.Provider>
-      <AppHeader section="dashboard" />
-      <button onClick={createCourse} className="fixed right-6 top-5 z-40 inline-flex h-10 items-center gap-2 rounded-md bg-ink px-4 text-sm font-extrabold text-white shadow-soft"><Plus size={16} /> Crear nuevo</button>
+      <AppHeader section="dashboard" actions={
+        <div className="flex items-center gap-2">
+          <input ref={csvInputRef} className="hidden" type="file" accept=".csv,text/csv" onChange={(event) => importCsv(event.target.files?.[0])} />
+          <button onClick={() => csvInputRef.current?.click()} disabled={importing} className="hidden h-9 items-center gap-2 rounded-md border border-line bg-white px-3 text-xs font-extrabold text-ink hover:bg-mist disabled:opacity-50 md:inline-flex">
+            <Upload size={14} /> {importing ? "Importando..." : "Importar CSV"}
+          </button>
+          <button onClick={createCourse} className="inline-flex h-9 items-center gap-2 rounded-md bg-ink px-3 text-xs font-extrabold text-white shadow-soft"><Plus size={14} /> Crear curso</button>
+        </div>
+      } />
       <main className="grid min-h-[calc(100vh-76px)] grid-cols-[260px_minmax(0,1fr)] bg-white">
         <aside className="border-r border-line p-4">
           <button onClick={createCourse} className="mb-5 flex h-10 w-full items-center justify-center gap-2 rounded-md bg-violet text-sm font-extrabold text-white"><Plus size={16} /> Crear curso</button>
+          <button onClick={() => csvInputRef.current?.click()} disabled={importing} className="mb-5 flex h-10 w-full items-center justify-center gap-2 rounded-md border border-line bg-white text-sm font-extrabold text-ink hover:bg-mist disabled:opacity-50"><Upload size={16} /> Importar CSV</button>
           {["Todos los cursos", "Recientes"].map((item, index) => (
             <a key={item} className={`block rounded-md px-3 py-3 text-sm font-bold ${index === 0 ? "bg-mist text-ink" : "text-steel"}`} href="#">{item}</a>
           ))}
@@ -792,6 +980,7 @@ function DashboardApp() {
             <select className="h-11 rounded-md border border-line px-3 text-sm font-semibold"><option>Recientes</option><option>Titulo</option></select>
             <select className="h-11 rounded-md border border-line px-3 text-sm font-semibold"><option>Todos</option><option>Cursos</option></select>
           </div>
+          {importError ? <div className="mb-5 rounded-md border border-red-100 bg-red-50 p-3 text-sm font-bold text-red-700">{importError}</div> : null}
           <div className="grid grid-cols-[repeat(auto-fill,minmax(190px,220px))] gap-4">
             {filtered.map((course, index) => (
               <CourseCard key={course.id} course={course} index={index} onDelete={() => setDeleteTarget(course)} />
