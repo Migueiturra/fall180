@@ -56,6 +56,13 @@
     root.style.setProperty("--ps-font-family", themeFontFamily(themeValue(theme, "fontFamily", "inter")));
   }
 
+  function applyCourseCover(course) {
+    var cover = course.metadata && typeof course.metadata.coverImageUrl === "string" ? course.metadata.coverImageUrl : "";
+    var sidebarHeader = document.querySelector(".sidebar > div:first-child");
+    if (!cover || !sidebarHeader) return;
+    sidebarHeader.style.background = 'linear-gradient(rgba(24,24,51,.42), rgba(24,24,51,.72)), url("' + cover.replace(/"/g, "%22") + '") center / cover no-repeat';
+  }
+
   function sanitizeRichHtml(value) {
     var template = document.createElement("template");
     var allowedTags = ["B", "BR", "DIV", "EM", "I", "LI", "OL", "P", "SPAN", "STRONG", "U", "UL"];
@@ -817,6 +824,7 @@
   function init(course) {
     state.course = course;
     applyTheme(course);
+    applyCourseCover(course);
     els.title.textContent = course.title;
     els.description.textContent = course.description;
     window.ScormRuntime.initialize();

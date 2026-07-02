@@ -42,7 +42,8 @@ import {
   isSupabaseConfigured,
   loadSupabaseCourse,
   loadSupabaseCourseList,
-  saveSupabaseCourse
+  saveSupabaseCourse,
+  uploadSupabaseAsset
 } from "./supabase";
 import "./styles.css";
 
@@ -71,6 +72,7 @@ type CourseSummary = {
   description: string;
   lessons: number;
   durationMinutes?: number;
+  coverImageUrl?: string;
   updatedAt?: string;
 };
 
@@ -171,6 +173,7 @@ function courseSummary(course: Course): CourseSummary {
     description: course.description,
     lessons: course.lessons?.length || 0,
     durationMinutes: Number(course.metadata?.durationMinutes) || estimateDuration(course),
+    coverImageUrl: typeof course.metadata?.coverImageUrl === "string" ? course.metadata.coverImageUrl : undefined,
     updatedAt: String(course.metadata?.updatedAt || "Actualizado hoy")
   };
 }
@@ -212,6 +215,30 @@ function courseThemeStyle(course: Course): React.CSSProperties {
     "--ps-button": theme.buttonColor,
     fontFamily: themeFontFamily(theme.fontFamily)
   } as React.CSSProperties;
+}
+
+function courseCoverImage(course: Course | CourseSummary) {
+  const metadata = "metadata" in course ? course.metadata : undefined;
+  const summaryCover = "coverImageUrl" in course ? course.coverImageUrl : "";
+  return summaryCover || (typeof metadata?.coverImageUrl === "string" ? metadata.coverImageUrl : "");
+}
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("No se pudo leer el archivo."));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function uploadImageFile(file: File) {
+  try {
+    if (isSupabaseConfigured) return await uploadSupabaseAsset(file);
+  } catch {
+    // Fall back to local embedded data for prototypes when Storage is not ready.
+  }
+  return fileToDataUrl(file);
 }
 
 function duplicateBlock(block: CourseBlock): CourseBlock {
@@ -464,9 +491,9 @@ function AppHeader({ section }: { section: "dashboard" | "editor" | "preview" })
         <strong className="text-base text-ink">PulseStudio</strong>
       </a>
       <nav className="hidden items-center gap-1 text-xs font-extrabold text-ink md:flex">
-        <a className={section === "dashboard" ? "rounded-md bg-mist px-2.5 py-2 text-violet" : "rounded-md px-2.5 py-2 hover:bg-mist"} href={appRoute("/courses.html")}>Dashboard</a>
+        <a className={section === "dashboard" ? "rounded-md bg-mist px-2.5 py-2 text-violet" : "rounded-md px-2.5 py-2 hover:bg-mist"} href={appRoute("/courses.html")}>Cursos</a>
         <a className={section === "editor" ? "rounded-md bg-mist px-2.5 py-2 text-violet" : "rounded-md px-2.5 py-2 hover:bg-mist"} href={appRoute("/")}>Editor</a>
-        <a className={section === "preview" ? "rounded-md bg-mist px-2.5 py-2 text-violet" : "rounded-md px-2.5 py-2 hover:bg-mist"} href={`${appRoute("/preview.html")}?course=${getCourseId()}`}>Preview</a>
+        <a className={section === "preview" ? "rounded-md bg-mist px-2.5 py-2 text-violet" : "rounded-md px-2.5 py-2 hover:bg-mist"} href={`${appRoute("/preview.html")}?course=${getCourseId()}`}>Vista previa</a>
       </nav>
       <div className="flex items-center gap-2" id="header-actions" />
     </header>
@@ -526,26 +553,23 @@ function DashboardApp() {
       <button onClick={createCourse} className="fixed right-6 top-5 z-40 inline-flex h-10 items-center gap-2 rounded-md bg-ink px-4 text-sm font-extrabold text-white shadow-soft"><Plus size={16} /> Crear nuevo</button>
       <main className="grid min-h-[calc(100vh-76px)] grid-cols-[260px_minmax(0,1fr)] bg-white">
         <aside className="border-r border-line p-4">
-          <button onClick={createCourse} className="mb-5 flex h-10 w-full items-center justify-center gap-2 rounded-md bg-violet text-sm font-extrabold text-white"><Plus size={16} /> Create New</button>
-          {["All Content", "Shared With Me", "My Shortcuts", "Private", "Team"].map((item, index) => (
+          <button onClick={createCourse} className="mb-5 flex h-10 w-full items-center justify-center gap-2 rounded-md bg-violet text-sm font-extrabold text-white"><Plus size={16} /> Crear curso</button>
+          {["Todos los cursos", "Recientes"].map((item, index) => (
             <a key={item} className={`block rounded-md px-3 py-3 text-sm font-bold ${index === 0 ? "bg-mist text-ink" : "text-steel"}`} href="#">{item}</a>
           ))}
-          <p className="mt-8 text-xs font-black uppercase tracking-[0.12em] text-violet">External connections</p>
-          <a className="mt-3 block px-3 py-2 text-sm font-bold text-steel" href="#">Moodle Sandbox</a>
-          <a className="block px-3 py-2 text-sm font-bold text-steel" href="#">SCORM exports</a>
         </aside>
         <section className="p-9">
           <div className="mb-7 grid grid-cols-[1fr_minmax(280px,480px)_150px_170px] items-center gap-4">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.12em] text-violet">Contenido</p>
-              <h1 className="m-0 text-3xl font-black tracking-[-0.03em] text-ink">All Content</h1>
+              <h1 className="m-0 text-3xl font-black tracking-[-0.03em] text-ink">Cursos</h1>
             </div>
             <label className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-steel" size={17} />
-              <input value={query} onChange={(event) => setQuery(event.target.value)} className="h-11 w-full rounded-md border border-line pl-11 pr-4 text-sm font-semibold outline-none focus:border-violet" placeholder="Search all content" />
+              <input value={query} onChange={(event) => setQuery(event.target.value)} className="h-11 w-full rounded-md border border-line pl-11 pr-4 text-sm font-semibold outline-none focus:border-violet" placeholder="Buscar cursos" />
             </label>
-            <select className="h-11 rounded-md border border-line px-3 text-sm font-semibold"><option>Recent</option><option>Title</option></select>
-            <select className="h-11 rounded-md border border-line px-3 text-sm font-semibold"><option>All Content</option><option>Courses</option></select>
+            <select className="h-11 rounded-md border border-line px-3 text-sm font-semibold"><option>Recientes</option><option>Titulo</option></select>
+            <select className="h-11 rounded-md border border-line px-3 text-sm font-semibold"><option>Todos</option><option>Cursos</option></select>
           </div>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(190px,220px))] gap-4">
             {filtered.map((course, index) => (
@@ -562,10 +586,12 @@ function DashboardApp() {
 function CourseCard({ course, index, onDelete }: { course: CourseSummary; index: number; onDelete: () => void }) {
   const covers = ["bg-violet", "bg-lavender", "bg-steel", "bg-plum", "bg-ink"];
   const updated = course.updatedAt?.startsWith("20") ? new Date(course.updatedAt).toLocaleDateString("es-CL") : course.updatedAt || "Actualizado hoy";
+  const cover = courseCoverImage(course);
   return (
     <article className="overflow-hidden rounded-md border border-line bg-white shadow-soft transition hover:-translate-y-0.5 hover:border-violet/50">
-      <div className={`flex h-20 items-end p-3 ${covers[index % covers.length]}`}>
-        <span className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-black uppercase tracking-[0.08em] text-white">Course</span>
+      <div className={`relative flex h-24 items-end overflow-hidden p-3 ${cover ? "bg-ink" : covers[index % covers.length]}`}>
+        {cover ? <img className="absolute inset-0 h-full w-full object-cover" src={resolveAsset(cover)} alt="" /> : null}
+        <span className="relative rounded-full bg-white/20 px-3 py-1 text-[11px] font-black uppercase tracking-[0.08em] text-white backdrop-blur-sm">Curso</span>
       </div>
       <div className="p-4">
         <div className="flex items-center gap-2 text-xs font-bold text-steel"><span className="grid size-5 place-items-center rounded-full bg-violet/15 text-violet">P</span> PulseStudio</div>
@@ -576,10 +602,9 @@ function CourseCard({ course, index, onDelete }: { course: CourseSummary; index:
           <span>{course.lessons} unidades</span>
           <span className="col-span-2">{updated}</span>
         </div>
-        <div className="my-4 grid gap-1 text-xs font-bold text-steel"><span>Course · {course.lessons} Lessons</span><span>Updated today</span></div>
         <div className="flex flex-wrap gap-2">
           <a className="rounded-md border border-line px-2.5 py-1.5 text-xs font-extrabold" href={`${appRoute("/")}?course=${course.id}`}>Editar</a>
-          <a className="rounded-md border border-line px-2.5 py-1.5 text-xs font-extrabold" href={`${appRoute("/preview.html")}?course=${course.id}`}>Preview</a>
+          <a className="rounded-md border border-line px-2.5 py-1.5 text-xs font-extrabold" href={`${appRoute("/preview.html")}?course=${course.id}`}>Vista previa</a>
           <button className="rounded-md border border-red-100 px-2.5 py-1.5 text-xs font-extrabold text-red-600" onClick={onDelete}><Trash2 size={13} /></button>
         </div>
       </div>
@@ -777,6 +802,9 @@ function CourseSettingsDialog({ course, onChange }: { course: Course; onChange: 
           <div className="mt-5 rounded-lg border border-line bg-white p-4">
             <Field label="Titulo" value={course.title} onChange={(value) => onChange((draft) => { draft.title = value; })} />
             <TextField label="Descripcion" value={course.description} onChange={(value) => onChange((draft) => { draft.description = value; })} rows={4} />
+            <div className="mt-4">
+              <ImageUploadField label="Foto de portada" value={courseCoverImage(course)} onChange={(value) => onChange((draft) => { draft.metadata = draft.metadata || {}; draft.metadata.coverImageUrl = value; })} />
+            </div>
             <Field label="Duracion estimada en minutos" type="number" value={String(Number(course.metadata?.durationMinutes) || estimateDuration(course))} onChange={(value) => onChange((draft) => { draft.metadata = draft.metadata || {}; draft.metadata.durationMinutes = Number(value) || estimateDuration(draft); })} />
             <Field label="Puntaje minimo" type="number" value={String(course.scorm?.passingScore || 70)} onChange={(value) => onChange((draft) => { draft.scorm = draft.scorm || {}; draft.scorm.passingScore = Number(value); })} />
           </div>
@@ -922,6 +950,34 @@ function Field({ label, value, onChange, type = "text" }: { label: string; value
 
 function TextField({ label, value, onChange, rows = 3 }: { label: string; value: string; onChange: (value: string) => void; rows?: number }) {
   return <label className="mt-4 grid gap-2 text-xs font-extrabold text-steel">{label}<textarea rows={rows} value={value} onChange={(event) => onChange(event.target.value)} className="rounded-md border border-line p-3 text-sm font-semibold text-ink outline-none focus:border-violet" /></label>;
+}
+
+function ImageUploadField({ label, value, onChange, preview = true }: { label: string; value: string; onChange: (value: string) => void; preview?: boolean }) {
+  const [uploading, setUploading] = useState(false);
+
+  async function handleFile(file?: File) {
+    if (!file) return;
+    setUploading(true);
+    try {
+      onChange(await uploadImageFile(file));
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className="grid gap-2">
+      <span className="text-xs font-extrabold text-steel">{label}</span>
+      {preview && value ? <img className="h-28 w-full rounded-md border border-line object-cover" src={resolveAsset(value)} alt="" /> : null}
+      <div className="grid grid-cols-[1fr_auto] gap-2">
+        <input value={value || ""} onChange={(event) => onChange(event.target.value)} placeholder="https://... o subir archivo" className="h-10 rounded-md border border-line px-3 text-sm font-semibold text-ink outline-none focus:border-violet" />
+        <label className="inline-flex h-10 cursor-pointer items-center rounded-md bg-mist px-3 text-xs font-extrabold text-ink">
+          {uploading ? "Subiendo..." : "Subir"}
+          <input className="hidden" type="file" accept="image/*" onChange={(event) => handleFile(event.target.files?.[0])} />
+        </label>
+      </div>
+    </div>
+  );
 }
 
 function linesToImages(value: string) {
@@ -1121,7 +1177,7 @@ function BlockForm({ block, onChange }: { block: CourseBlock; onChange: (content
 
   if (block.type === "heading" || block.type === "paragraph") return <RichTextarea label="Texto" value={rich(c, "text")} onChange={(html) => patch({ textHtml: html, text: htmlToText(html) })} rows={block.type === "heading" ? 2 : 7} />;
   if (block.type === "statement") return <RichTextarea label="Statement" value={rich(c, "text")} onChange={(html) => patch({ textHtml: html, text: htmlToText(html) })} rows={5} />;
-  if (block.type === "image_text") return <div className="grid gap-4"><Field label="URL imagen" value={c.imageUrl || ""} onChange={(value) => patch({ imageUrl: value })} /><Field label="Tamano imagen px" type="number" value={String(c.imageSize || 180)} onChange={(value) => patch({ imageSize: Number(value) || 180 })} /><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} /><RichTextarea label="Texto" value={rich(c, "text")} onChange={(html) => patch({ textHtml: html, text: htmlToText(html) })} /></div>;
+  if (block.type === "image_text") return <div className="grid gap-4"><ImageUploadField label="Imagen" value={c.imageUrl || ""} onChange={(value) => patch({ imageUrl: value })} /><Field label="Tamano imagen px" type="number" value={String(c.imageSize || 180)} onChange={(value) => patch({ imageSize: Number(value) || 180 })} /><Field label="Titulo" value={c.title || ""} onChange={(value) => patch({ title: value })} /><RichTextarea label="Texto" value={rich(c, "text")} onChange={(html) => patch({ textHtml: html, text: htmlToText(html) })} /></div>;
   if (block.type === "image_gallery") return <ImageGalleryForm content={c} onChange={patch} />;
   if (block.type === "flip_cards") return <FlipCardsForm content={c} onChange={patch} />;
   if (block.type === "tabs") return <TabsForm content={c} onChange={patch} />;
@@ -1153,7 +1209,7 @@ function ImageGalleryForm({ content, onChange }: { content: Record<string, any>;
         <span className="text-xs font-extrabold text-steel">Imagenes</span>
         {images.map((image: any, index: number) => (
           <div key={index} className="grid grid-cols-[1fr_auto] gap-2">
-            <input value={image.url || ""} onChange={(event) => updateImage(index, { url: event.target.value })} placeholder="https://..." className="h-10 rounded-md border border-line px-3 text-sm font-semibold text-ink outline-none focus:border-violet" />
+            <ImageUploadField label={`Imagen ${index + 1}`} value={image.url || ""} onChange={(value) => updateImage(index, { url: value })} preview={false} />
             <button type="button" className="grid size-10 place-items-center rounded-md text-red-600 hover:bg-red-50" onClick={() => onChange({ images: images.filter((_: any, itemIndex: number) => itemIndex !== index) })}><Trash2 size={15} /></button>
           </div>
         ))}
@@ -1626,6 +1682,7 @@ function PreviewApp() {
     if (index > lessonIndex) return sum;
     return sum + unitProgress;
   }, 0) / Math.max(course.lessons.length, 1));
+  const cover = courseCoverImage(course);
 
   function canContinue(screen: number) {
     return lesson.blocks.every((block, index) => {
@@ -1646,7 +1703,7 @@ function PreviewApp() {
   return (
     <div className="grid min-h-screen grid-cols-[260px_1fr]" style={{ ...courseThemeStyle(course), background: "var(--ps-bg)", color: "var(--ps-ink)" }}>
       <aside className="sticky top-0 h-screen overflow-y-auto border-r border-line bg-white">
-        <div className="p-6 text-white" style={{ background: "linear-gradient(rgba(24,24,51,.18), rgba(24,24,51,.38)), linear-gradient(135deg, var(--ps-primary), var(--ps-accent))" }}><p className="text-[11px] font-black uppercase tracking-[0.12em]">Course preview</p><h1 className="mt-5 text-2xl font-black">{course.title}</h1><p className="mt-6 text-xs font-black">CURSO {totalProgress}%</p><div className="mt-3 h-1 bg-white/35"><i className="block h-full bg-white" style={{ width: `${totalProgress}%` }} /></div><p className="mt-5 text-xs font-black">UNIDAD {unitProgress}%</p><div className="mt-3 h-1 bg-white/35"><i className="block h-full" style={{ width: `${unitProgress}%`, backgroundColor: "var(--ps-primary)" }} /></div></div>
+        <div className="p-6 text-white" style={{ background: cover ? `linear-gradient(rgba(24,24,51,.42), rgba(24,24,51,.72)), url("${resolveAsset(cover)}") center / cover no-repeat` : "linear-gradient(rgba(24,24,51,.18), rgba(24,24,51,.38)), linear-gradient(135deg, var(--ps-primary), var(--ps-accent))" }}><p className="text-[11px] font-black uppercase tracking-[0.12em]">Vista previa</p><h1 className="mt-5 text-2xl font-black">{course.title}</h1><p className="mt-6 text-xs font-black">CURSO {totalProgress}%</p><div className="mt-3 h-1 bg-white/35"><i className="block h-full bg-white" style={{ width: `${totalProgress}%` }} /></div><p className="mt-5 text-xs font-black">UNIDAD {unitProgress}%</p><div className="mt-3 h-1 bg-white/35"><i className="block h-full" style={{ width: `${unitProgress}%`, backgroundColor: "var(--ps-primary)" }} /></div></div>
         <nav className="grid gap-1.5 p-4">{course.lessons.map((item, index) => <button key={item.id} onClick={() => setLessonIndex(index)} className={`grid grid-cols-[24px_1fr_auto] items-center gap-2 rounded-md px-2.5 py-2 text-left ${index === lessonIndex ? "bg-mist" : ""}`}><span className="grid size-5 place-items-center rounded-full border border-line text-xs font-bold">{index + 1}</span><strong className="truncate text-sm">{item.title}</strong><small className="text-[11px] font-bold text-steel">{index <= lessonIndex ? "Disponible" : "Bloqueada"}</small></button>)}</nav>
       </aside>
       <main className="p-8"><a className="mb-7 inline-flex rounded-md border border-line px-4 py-2 text-sm font-extrabold" href={`${appRoute("/")}?course=${course.id}`}>Volver al editor</a><section className="mx-auto max-w-5xl"><p className="text-xs font-black uppercase tracking-[0.12em]" style={{ color: "var(--ps-primary)" }}>Unidad {lessonIndex + 1} de {course.lessons.length}</p><h2 className="mb-7 text-4xl font-black tracking-[-0.04em]">{lesson.title}</h2><div className="grid gap-6">{lesson.blocks.map((block, index) => {

@@ -6,6 +6,7 @@ type CourseSummary = {
   description: string;
   lessons: number;
   durationMinutes?: number;
+  coverImageUrl?: string;
   updatedAt?: string;
 };
 
@@ -43,6 +44,7 @@ function rowToSummary(row: CourseRow): CourseSummary {
     description: row.description || "",
     lessons: row.lesson_count || row.payload?.lessons?.length || 0,
     durationMinutes: Number(row.payload?.metadata?.durationMinutes) || estimateDuration(row.payload),
+    coverImageUrl: typeof row.payload?.metadata?.coverImageUrl === "string" ? row.payload.metadata.coverImageUrl : undefined,
     updatedAt: row.updated_at || undefined
   };
 }
@@ -121,4 +123,20 @@ export async function deleteSupabaseCourse(id: string): Promise<void> {
     .eq("id", id);
 
   if (error) throw error;
+}
+
+export async function uploadSupabaseAsset(file: File): Promise<string> {
+  if (!supabase) throw new Error("Supabase no esta configurado.");
+
+  const extension = file.name.split(".").pop()?.toLowerCase() || "bin";
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
+  const path = `uploads/${Date.now()}-${Math.floor(Math.random() * 100000)}-${safeName || `asset.${extension}`}`;
+  const { error } = await supabase.storage.from("course-assets").upload(path, file, {
+    cacheControl: "3600",
+    upsert: false
+  });
+
+  if (error) throw error;
+  const { data } = supabase.storage.from("course-assets").getPublicUrl(path);
+  return data.publicUrl;
 }
