@@ -757,6 +757,7 @@ function EditorApp() {
             </div>
           </div>
           <div className="grid gap-2.5 pb-20">
+            <InlineInsertBlockBar onAdd={(type) => addBlock(type, 0)} alwaysVisible label="Agregar bloque al inicio" />
             {lesson.blocks.map((block, index) => (
               <React.Fragment key={block.id}>
                 {index > 0 ? <InlineInsertBlockBar onAdd={(type) => addBlock(type, index)} /> : null}
@@ -857,7 +858,37 @@ function SidebarToolGroup({ group, onAdd }: { group: { title: string; tools: Blo
   );
 }
 
-function InlineInsertBlockBar({ onAdd }: { onAdd: (type: BlockType) => void }) {
+function BlockPicker({ onAdd, compact = false }: { onAdd: (type: BlockType) => void; compact?: boolean }) {
+  return (
+    <div className={`grid gap-2 ${compact ? "min-w-[320px] max-w-[min(720px,calc(100vw-340px))]" : ""}`}>
+      {blockToolGroups.map((group) => (
+        <div key={group.title} className="grid gap-1">
+          <p className="px-1 text-[10px] font-black uppercase tracking-[0.12em] text-steel">{group.title}</p>
+          <div className="flex flex-wrap gap-1">
+            {group.tools.map((type) => {
+              const tool = blockToolByType(type);
+              return (
+                <Tooltip.Root key={type}>
+                  <Tooltip.Trigger asChild>
+                    <button type="button" aria-label={tool.label} onClick={() => onAdd(type)} className={`${compact ? "h-8 px-2" : "h-9 px-2.5"} inline-flex items-center gap-1.5 rounded-md border border-line bg-white text-xs font-extrabold text-ink transition hover:border-violet hover:bg-mist hover:text-violet`}>
+                      {tool.icon}
+                      <span className={compact ? "hidden sm:inline" : ""}>{tool.label}</span>
+                    </button>
+                  </Tooltip.Trigger>
+                  <Tooltip.Portal>
+                    <Tooltip.Content className="rounded bg-ink px-2 py-1 text-xs font-bold text-white" sideOffset={8}>{tool.label}</Tooltip.Content>
+                  </Tooltip.Portal>
+                </Tooltip.Root>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function InlineInsertBlockBar({ onAdd, alwaysVisible = false, label = "Agregar bloque aqui" }: { onAdd: (type: BlockType) => void; alwaysVisible?: boolean; label?: string }) {
   const [open, setOpen] = useState(false);
 
   function add(type: BlockType) {
@@ -870,26 +901,15 @@ function InlineInsertBlockBar({ onAdd }: { onAdd: (type: BlockType) => void }) {
       <div className="absolute left-0 right-0 top-1/2 h-px -translate-y-1/2 bg-line opacity-0 transition group-hover:opacity-100" />
       <button
         type="button"
-        aria-label="Agregar bloque aqui"
+        aria-label={label}
         onClick={() => setOpen((current) => !current)}
-        className={`relative z-10 grid size-6 place-items-center rounded-full border border-line bg-white text-violet shadow-sm transition hover:border-violet hover:bg-mist ${open ? "scale-100 opacity-100" : "scale-95 opacity-0 group-hover:scale-100 group-hover:opacity-100"}`}
+        className={`relative z-10 grid size-6 place-items-center rounded-full border border-line bg-white text-violet shadow-sm transition hover:border-violet hover:bg-mist ${alwaysVisible || open ? "scale-100 opacity-100" : "scale-95 opacity-0 group-hover:scale-100 group-hover:opacity-100"}`}
       >
         <Plus size={14} />
       </button>
       {open ? (
-        <div className="relative z-20 mt-1 flex max-w-[min(760px,calc(100vw-320px))] flex-wrap items-center justify-center gap-1 rounded-xl border border-violet/20 bg-white/95 px-2 py-1.5 shadow-soft backdrop-blur-xl">
-          {blockTools.map((tool) => (
-            <Tooltip.Root key={tool.type}>
-              <Tooltip.Trigger asChild>
-                <button type="button" aria-label={tool.label} onClick={() => add(tool.type)} className="grid size-8 place-items-center rounded-md text-ink transition hover:bg-mist hover:text-violet">
-                  {tool.icon}
-                </button>
-              </Tooltip.Trigger>
-              <Tooltip.Portal>
-                <Tooltip.Content className="rounded bg-ink px-2 py-1 text-xs font-bold text-white" sideOffset={8}>{tool.label}</Tooltip.Content>
-              </Tooltip.Portal>
-            </Tooltip.Root>
-          ))}
+        <div className="relative z-20 mt-1 rounded-xl border border-violet/20 bg-white/95 p-2 shadow-soft backdrop-blur-xl">
+          <BlockPicker onAdd={add} compact />
         </div>
       ) : null}
     </div>
@@ -898,23 +918,10 @@ function InlineInsertBlockBar({ onAdd }: { onAdd: (type: BlockType) => void }) {
 
 function BottomBlockBar({ onAdd }: { onAdd: (type: BlockType) => void }) {
   return (
-    <div className="sticky bottom-3 z-20 mx-auto mt-5 max-w-4xl rounded-xl border border-violet/20 bg-white/95 p-2 shadow-soft backdrop-blur-xl">
-      <div className="flex items-center gap-3">
-        <span className="hidden shrink-0 pl-2 text-[10px] font-black uppercase tracking-[0.12em] text-violet md:block">Agregar</span>
-        <div className="flex flex-1 flex-wrap justify-center gap-0.5 md:justify-end">
-          {blockTools.map((tool) => (
-            <Tooltip.Root key={tool.type}>
-              <Tooltip.Trigger asChild>
-                <button aria-label={tool.label} onClick={() => onAdd(tool.type)} className="grid size-8 place-items-center rounded-md text-ink transition hover:bg-mist hover:text-violet">
-                  {tool.icon}
-                </button>
-              </Tooltip.Trigger>
-              <Tooltip.Portal>
-                <Tooltip.Content className="rounded bg-ink px-2 py-1 text-xs font-bold text-white" sideOffset={8}>{tool.label}</Tooltip.Content>
-              </Tooltip.Portal>
-            </Tooltip.Root>
-          ))}
-        </div>
+    <div className="sticky bottom-3 z-20 mx-auto mt-5 max-w-5xl rounded-xl border border-violet/20 bg-white/95 p-2 shadow-soft backdrop-blur-xl">
+      <div className="grid gap-2">
+        <span className="pl-1 text-[10px] font-black uppercase tracking-[0.12em] text-violet">Agregar bloque</span>
+        <BlockPicker onAdd={onAdd} compact />
       </div>
     </div>
   );
