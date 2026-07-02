@@ -39,12 +39,21 @@ import demoCourseData from "../../../course/courses/curso-demo-scorm.json";
 import {
   createSupabaseCourse,
   deleteSupabaseCourse,
+  getCurrentSession,
+  loadCurrentProfile,
   isSupabaseConfigured,
   loadSupabaseCourse,
   loadSupabaseCourseList,
+  onAuthSessionChange,
   saveSupabaseCourse,
+  signInWithEmail,
+  signInWithGoogle,
+  signOut,
+  signUpWithEmail,
   uploadSupabaseAsset
 } from "./supabase";
+import type { AuthProfile } from "./supabase";
+import type { Session } from "@supabase/supabase-js";
 import "./styles.css";
 
 type BlockType =
@@ -110,6 +119,22 @@ const defaultTheme = {
   fontFamily: "inter",
   fontWeight: "normal"
 };
+
+type AuthContextValue = {
+  session: Session | null;
+  profile: AuthProfile | null;
+  reloadProfile: () => Promise<void>;
+};
+
+const AuthContext = React.createContext<AuthContextValue>({
+  session: null,
+  profile: null,
+  reloadProfile: async () => {}
+});
+
+function useAuth() {
+  return React.useContext(AuthContext);
+}
 
 const blockTools: Array<{ type: BlockType; label: string; icon: React.ReactNode }> = [
   { type: "heading", label: "Titulo", icon: <BookOpen size={15} /> },
@@ -514,6 +539,129 @@ function defaultBlock(type: BlockType): CourseBlock {
   return { id: uid("b"), type: "divider", content: {} };
 }
 
+function AppRoot() {
+  if (!isSupabaseConfigured) return <App />;
+  return <AuthGate><App /></AuthGate>;
+}
+
+function AuthGate({ children }: { children: React.ReactNode }) {
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<AuthProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  async function reloadProfile() {
+    const nextProfile = await loadCurrentProfile();
+    setProfile(nextProfile);
+  }
+
+  useEffect(() => {
+    let active = true;
+    getCurrentSession()
+      .then(async (currentSession) => {
+        if (!active) return;
+        setSession(currentSession);
+        if (currentSession) setProfile(await loadCurrentProfile());
+      })
+      .catch(() => {
+        if (active) {
+          setSession(null);
+          setProfile(null);
+        }
+      })
+      .finally(() => active && setLoading(false));
+
+    return onAuthSessionChange(async (nextSession) => {
+      setSession(nextSession);
+      try {
+        setProfile(nextSession ? await loadCurrentProfile() : null);
+      } catch {
+        setProfile(null);
+      }
+      setLoading(false);
+    });
+  }, []);
+
+  if (loading) return <div className="grid min-h-screen place-items-center bg-[#f7f7fc] text-sm font-bold text-steel">Cargando cuenta...</div>;
+  if (!session) return <AuthPage />;
+
+  return (
+    <AuthContext.Provider value={{ session, profile, reloadProfile }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+function AuthPage() {
+  const [mode, setMode] = useState<"login" | "register">("login");
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [status, setStatus] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setStatus("");
+    try {
+      if (mode === "register") {
+        await signUpWithEmail(email.trim(), password, fullName.trim());
+        setStatus("Cuenta creada. Si Supabase pide confirmar correo, revisa tu email antes de entrar.");
+      } else {
+        await signInWithEmail(email.trim(), password);
+      }
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "No se pudo completar la accion.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function loginWithGoogle() {
+    setBusy(true);
+    setStatus("");
+    try {
+      await signInWithGoogle();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "No se pudo abrir Google.");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <main className="grid min-h-screen grid-cols-1 bg-[#f7f7fc] lg:grid-cols-[minmax(420px,0.9fr)_1.1fr]">
+      <section className="flex flex-col justify-between bg-ink p-8 text-white">
+        <div className="flex items-center gap-2">
+          <span className="grid size-5 place-items-center rounded-full bg-violet/25"><span className="size-2 rounded-full bg-violet" /></span>
+          <strong>PulseStudio</strong>
+        </div>
+        <div className="max-w-lg py-16">
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-violet">Authoring profesional</p>
+          <h1 className="mt-4 text-4xl font-black tracking-[-0.04em]">Crea cursos SCORM con una cuenta segura.</h1>
+          <p className="mt-5 text-sm leading-7 text-white/72">Tus cursos, recursos y configuraciones quedan asociados a tu usuario. El super admin puede administrar la plataforma desde Supabase.</p>
+        </div>
+        <p className="text-xs text-white/50">Acceso protegido con Supabase Auth y Row Level Security.</p>
+      </section>
+      <section className="grid place-items-center p-6">
+        <form onSubmit={submit} className="w-full max-w-md rounded-xl border border-line bg-white p-6 shadow-soft">
+          <p className="text-xs font-black uppercase tracking-[0.12em] text-violet">{mode === "login" ? "Iniciar sesion" : "Crear cuenta"}</p>
+          <h2 className="mt-2 text-2xl font-black tracking-[-0.03em] text-ink">{mode === "login" ? "Entra a tu espacio" : "Registra tus datos"}</h2>
+          <button type="button" disabled={busy} onClick={loginWithGoogle} className="mt-5 flex h-11 w-full items-center justify-center rounded-md border border-line bg-white text-sm font-extrabold text-ink hover:bg-mist disabled:opacity-50">Continuar con Google</button>
+          <div className="my-5 flex items-center gap-3 text-xs font-bold uppercase tracking-[0.12em] text-steel"><span className="h-px flex-1 bg-line" /> o <span className="h-px flex-1 bg-line" /></div>
+          {mode === "register" ? <Field label="Nombre completo" value={fullName} onChange={setFullName} /> : null}
+          <Field label="Correo" type="email" value={email} onChange={setEmail} />
+          <Field label="Contrasena" type="password" value={password} onChange={setPassword} />
+          <button disabled={busy || !email || !password || (mode === "register" && !fullName)} className="mt-5 h-11 w-full rounded-md bg-ink text-sm font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-50">{busy ? "Procesando..." : mode === "login" ? "Entrar" : "Crear cuenta"}</button>
+          {status ? <p className="mt-4 rounded-md bg-mist p-3 text-sm font-bold leading-relaxed text-plum">{status}</p> : null}
+          <button type="button" className="mt-4 text-sm font-bold text-violet hover:underline" onClick={() => { setMode(mode === "login" ? "register" : "login"); setStatus(""); }}>
+            {mode === "login" ? "No tengo cuenta, crear una" : "Ya tengo cuenta, entrar"}
+          </button>
+        </form>
+      </section>
+    </main>
+  );
+}
+
 function App() {
   const path = window.location.pathname;
   if (path.includes("preview")) return <PreviewApp />;
@@ -535,8 +683,29 @@ function AppHeader({ section }: { section: "dashboard" | "editor" | "preview" })
         <a className={section === "editor" ? "rounded-md bg-mist px-2.5 py-2 text-violet" : "rounded-md px-2.5 py-2 hover:bg-mist"} href={appRoute("/")}>Editor</a>
         <a className={section === "preview" ? "rounded-md bg-mist px-2.5 py-2 text-violet" : "rounded-md px-2.5 py-2 hover:bg-mist"} href={`${appRoute("/preview.html")}?course=${getCourseId()}`}>Vista previa</a>
       </nav>
-      <div className="flex items-center gap-2" id="header-actions" />
+      <div className="ml-auto flex items-center gap-2" id="header-actions">
+        {section !== "editor" ? <AuthStatus /> : null}
+      </div>
     </header>
+  );
+}
+
+function AuthStatus() {
+  const { profile } = useAuth();
+  if (!isSupabaseConfigured || !profile) return null;
+  const name = profile.full_name || profile.email;
+  const initials = (name || "U").split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
+  return (
+    <div className="flex items-center gap-2">
+      <div className="hidden text-right sm:block">
+        <p className="text-xs font-black leading-tight text-ink">{name}</p>
+        <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-steel">{profile.role === "super_admin" ? "Super admin" : "Usuario"}</p>
+      </div>
+      <span className="grid size-8 place-items-center overflow-hidden rounded-full bg-violet/15 text-xs font-black text-violet">
+        {profile.avatar_url ? <img className="h-full w-full object-cover" src={profile.avatar_url} alt="" /> : initials}
+      </span>
+      <button onClick={() => signOut()} className="h-8 rounded-md border border-line bg-white px-2.5 text-xs font-extrabold text-ink hover:bg-mist">Salir</button>
+    </div>
   );
 }
 
@@ -1907,4 +2076,4 @@ function moveLesson(list: Lesson[], index: number, direction: number, setLessonI
   setLessonIndex(Math.max(0, Math.min(list.length - 1, index + direction)));
 }
 
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(document.getElementById("root")!).render(<AppRoot />);
